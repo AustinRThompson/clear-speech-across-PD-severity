@@ -1,0 +1,937 @@
+---
+title: "Vowel Artic in PD: Bayesian Analysis"
+output: html_notebook
+---
+
+# Packages
+```{r}
+library(tidyverse)
+library(ggrepel)
+library(extraDistr)   # install.packages("extraDistr")
+library(HDInterval)   # install.packages("HDInterval")
+library(tidybayes)    # install.packages("tidybayes")
+library(bayesplot)    # install.packages("bayesplot")
+library(modelr)
+library(broom.mixed)  # install.packages("broom.mixed")
+library(brms)         # install.packages("brms")
+library(ggthemes)
+library(patchwork)
+theme_set(theme_minimal())
+
+# Creating a theme function used for visualizations
+theme_clean <- function() {
+  theme_minimal(base_family = "Arial") +
+    theme(panel.grid.minor = element_blank(),
+          plot.title = element_text(face = "bold"),
+          axis.title = element_text(face = "bold"),
+          strip.text = element_text(face = "bold", size = rel(1), hjust = 0),
+          strip.background = element_rect(fill = "grey80", color = NA),
+          legend.title = element_text(face = "bold"))
+}
+```
+
+# Background
+	
+This study is a follow-up analysis of our previous work examining the predictive value of acoustic and kinematic measures in predicting intelligibility and articulatory precision in speakers with and without Parkinson's disease (PD; https://osf.io/hfuq5/). 
+
+Our previous findings indicated that among several measures, vowel space area (VSA), and kinematic distance were the best predictors of both intelligibility and articulatory precision. However, this relationship was examined using pooled data, without considering differences in speaking group (control vs. PD) or condition (conversational vs. clear). Therefore, it remains unknown how speakers with and without dysarthria due to PD differ in terms of intelligibility, articulatory precision, VSA, and kinematic distance. Additionally, it is unclear how these groups respond to prompts to speak more clearly. Thus, the following research questions were posed:
+
+1. How do speakers with and without PD of varying dysarthria severity levels differ in terms of intelligibility, articulatory precision, vowel space area (VSA), and kinematic distance? (Group Effects)
+2. When prompted to speak more clearly, how do speakers with and without PD of varying dysarthria severities modify their articulation (VSA and kinematic distance), and does this cue result in perceptual gains in intelligibility and articulatory precision? (Group × Condition Interaction Effects)
+
+
+# Data Analysis
+Before we can build our models, we'll need some information about the speakers.
+```{r}
+speakerList <-
+  rio::import(file = "https://raw.githubusercontent.com/AustinRThompson/multidomain-vowelArtic-PD/main/Data/PreppedData/Speaker%20List_Clean.csv") %>%
+  
+  # Making sure dxTime is numeric
+  dplyr::mutate(dxTime = as.numeric(dxTime)) %>%
+  
+  # Refactoring Sex
+  dplyr::mutate(Sex = factor(
+    Sex,
+    levels = c("M",
+               "F"),
+    labels = c("Male Speakers",
+               "Female Speakers")
+  )) %>%
+  
+  # Removing the MoCA Scores - Not all speakers had them
+  dplyr::select(!MoCA)
+```
+
+## Intelligibility
+Intelligibility was collected through ratings obtained through a listener survey. They would listen to a speaker, and then rate how intelligible the speaker was using a horizontally oriented visual analog scale. The left end of the scale was labeled "Cannot understand anything" and corresponded to a value of 0. The right end of the scale was labeled "Understood everything" and corresponded to a value of 100.
+
+While any value between 0 and 100 could be selected, listeners tended to rate on the extreme ends, resulting in a beta distribution. Therefore, for this model, we used a beta family for our model. But first, we rescaled the intelligibility measure to fall between 0 and 1, excluding the endpoint values of 0 and 1.
+### Loading the data
+```{r}
+perceptualMeasures <- rio::import(file = "https://raw.githubusercontent.com/AustinRThompson/multidomain-vowelArtic-PD/main/Data/PreppedData/ListenerData/ListenerRatings_allRatings.csv") %>%
+  dplyr::select(!V1) %>%
+  dplyr::filter(ratingType == "Int") %>% # We only want the intelligibility ratings for this model
+  dplyr::filter(condition != "lessClear") %>% # We won't use the less clear condition in this study
+  
+  # Here we rename some variables and clean up the factors
+  dplyr::rename(Int = Rating) %>%
+  dplyr::mutate(Sex = factor(Sex, levels = c("M", "F")),
+                condition = factor(condition, levels = c("conv", "moreClear"))) %>%
+  
+  # Now we merge the intelligibility ratings with the speakerList, which has information about severity level.
+  base::merge(., speakerList %>%
+                dplyr::select(StudyID, Severity)) %>%
+  dplyr::mutate(
+    Severity = factor(
+      Severity,
+      levels = c("HC", "Mild", "Moderate", "Severe", "Profound"),
+      labels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+    )
+  ) %>%
+  dplyr::relocate(Severity, .after = Group)
+
+# Lets visualize the outcome measure, intelligibility
+hist(perceptualMeasures$Int)
+
+# Here, we rescale the measure to fit a beta distribtion
+epsilon <- 1e-5
+data_modelData_Int <- perceptualMeasures %>%
+  dplyr::select(StudyID,
+                Group,
+                Sex,
+                Age,
+                Severity,
+                condition,
+                Sent,
+                rep,
+                ListenerID,
+                Int) %>%
+  dplyr::mutate(
+    Int = Int / 100,
+    # the following makes sure that 0 and 1 are not included in the beta distribution
+    Int = Int * ((nrow(.) - 1) + .5) / nrow(.),
+    Int = Int * (1 - 2 * epsilon) + epsilon
+  )
+
+performance::check_distribution(data_modelData_Int$Int)
+
+# Taking out the trash
+rm(perceptualMeasures, epsilon)
+```
+
+### Priors
+First, we need to figure out the model parameters
+```{r}
+
+modelFormula_Int <-
+  Int ~ Severity * condition +
+  (1 | StudyID / Sent / rep) + # Each Speaker (StudyID) read three sentences (Sent), five times each (rep)
+  (1 | ListenerID)
+
+brms::get_prior(
+  modelFormula_Int, 
+  data = data_modelData_Int, 
+  family = Beta)
+```
+Now we can specify weakly informative priors.
+```{r}
+prior_Int <- c(
+  prior(normal(0, 10), class = Intercept), # start with larger value - 10
+  prior(normal(0, 10), class = b),
+  prior(cauchy(0, 10), class = sd), # paper on variance priors: https://projecteuclid.org/journals/bayesian-analysis/volume-1/issue-3/Prior-distributions-for-variance-parameters-in-hierarchical-models-comment-on/10.1214/06-BA117A.full - check 95% interval for cauchy - very large upper bound 10
+  prior(gamma(1, 0.5), class = phi) # Phi = 1, mu = .5
+)
+```
+
+### Building the model
+```{r}
+model_Int <- brms::brm(
+  formula = modelFormula_Int,
+  data = data_modelData_Int,
+  prior = prior_Int,
+  family = Beta,
+  chains = 4,
+  cores = 4,
+  iter = 4000,
+  warmup = 1000,
+  control = list(adapt_delta = 0.95),
+  file = "Models/brms_Int.rds",
+  file_refit = "on_change"
+)
+```
+
+### Model Summary
+```{r}
+# Probability of direction (pd)
+pd_Int <- bayestestR::p_direction(model_Int) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "Intercept", "(Intercept)", term))
+
+# Model results
+modelSummary_Int <- tidy(model_Int) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_Int, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    estimate_natScale = plogis(estimate),
+    l_95_CI_natScale = plogis(l_95_CI),
+    u_95_CI_natScale = plogis(u_95_CI),
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_Int)
+```
+### Model Diagnostics
+```{r}
+# Assess chain mixing
+plot_chainMix_Int <- base::plot(model_Int, ask=FALSE)
+
+# Posterior predictive check
+plot_ppCheck_Int <- brms::pp_check(model_Int, ndraws = 1000)
+
+# Plot conditional effects
+plot_conditionalEffects_Int <- base::plot(conditional_effects(model_Int), ask = FALSE)
+
+# Interval Estimations
+data_posterior_Int <- as.matrix(model_Int) %>%
+  as.data.frame()
+
+plot_intervalEst_Int <- mcmc_areas(
+  data_posterior_Int,
+  pars = fixed_effects <- data_posterior_Int %>%
+    as.data.frame() %>%
+    dplyr::select(starts_with("b_")) %>%
+    colnames(),
+  # arbitrary threshold for shading probability mass
+  prob = 0.95
+) 
+
+```
+
+### Visualizations
+```{r}
+
+# Generate expected predictions from the posterio
+data_posterior_Int <- model_Int %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear")
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(Severity = factor(
+    Severity,
+    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+  ),
+  condition = factor(condition,
+                     levels = c("conv","moreClear"),
+                     labels = c("conversational", "clear")))
+
+plot_grandMean_Int <- ggplot(data_posterior_Int, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted intelligibility rating", y = NULL,
+       fill = "Condition",
+       subtitle = "Posterior predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0,1)) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+epsilon <- 1e-5
+data_me_Int <- model_Int %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    #at = list(Severity = "Profound"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    .value = (.value - epsilon) / (1 - 2 * epsilon),
+    # Step 1 & 2: Reverse the offset and scaling
+    .value = .value * nrow(.) / ((nrow(.) - 1) + .5)
+  )
+
+
+plot_ame_Int <- ggplot(data_me_Int, aes(x = .value, y = Severity)) +
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(x = "Average marginal effect of condition",
+       y = NULL,
+       subtitle = "Condition effect (clear - conversational)") +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+# Combined plot
+plot_Int <- (plot_grandMean_Int | plot_ame_Int) +
+  plot_annotation(title = "Intelligibility",
+                  subtitle = "Intelligibility ratings across group/severity and speaking conditions.",
+                  theme = theme_clean())
+ggsave(
+  plot = plot_Int,
+  filename = "Plots/plot_Int.png",
+  height = 6,
+  width = 8,
+  unit = "in",
+  scale = 1,
+  bg = "white"
+)
+```
+
+## Articulatory Precision
+Articulatory precision was collected in the same way as intelligibility ratings. They were collected through ratings obtained through a listener survey. They would listen to a speaker, and then rate how precise the speaker was using a horizontally oriented visual analog scale. The left end of the scale was labeled "imprecise or mumbled" and corresponded to a value of 0. The right end of the scale was labeled "precise or clear" and corresponded to a value of 100.
+
+While any value between 0 and 100 could be selected, listeners tended to rate on the extreme ends, resulting in a beta distribution. Therefore, for this model, we used a beta family for our model. But first, we rescaled the precision ratings to fall between 0 and 1, excluding the endpoint values of 0 and 1.
+
+### Loading the data
+```{r}
+perceptualMeasures <- rio::import(file = "https://raw.githubusercontent.com/AustinRThompson/multidomain-vowelArtic-PD/main/Data/PreppedData/ListenerData/ListenerRatings_allRatings.csv") %>%
+  dplyr::select(!V1) %>%
+  dplyr::filter(ratingType == "AP") %>% # We only want the intelligibility ratings for this model
+  dplyr::filter(condition != "lessClear") %>% # We won't use the less clear condition in this study
+  
+  # Here we rename some variables and clean up the factors
+  dplyr::rename(AP = Rating) %>%
+  dplyr::mutate(Sex = factor(Sex, levels = c("M", "F")),
+                condition = factor(condition, levels = c("conv", "moreClear"))) %>%
+  
+  # Now we merge the intelligibility ratings with the speakerList, which has information about severity level.
+  base::merge(., speakerList %>%
+                dplyr::select(StudyID, Severity)) %>%
+  dplyr::mutate(
+    Severity = factor(
+      Severity,
+      levels = c("HC", "Mild", "Moderate", "Severe", "Profound"),
+      labels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+    )
+  ) %>%
+  dplyr::relocate(Severity, .after = Group)
+
+
+# Lets visualize the outcome measure, intelligibility
+hist(perceptualMeasures$AP)
+
+# Here, we rescale the measure to fit a beta distribtion
+epsilon <- 1e-5
+data_modelData_AP <- perceptualMeasures %>%
+  dplyr::select(StudyID,
+                Group,
+                Sex,
+                Age,
+                Severity,
+                condition,
+                Sent,
+                rep,
+                ListenerID,
+                AP) %>%
+  dplyr::mutate(
+    AP = AP / 100,
+    AP = AP * ((nrow(.) - 1) + .5) / nrow(.),
+    AP = AP * (1 - 2 * epsilon) + epsilon
+  ) # this makes sure that 0 and 1 are not included in the beta distribution
+
+performance::check_distribution(data_modelData_AP$AP)
+
+# Taking out the trash
+rm(perceptualMeasures, epsilon)
+```
+
+### Priors
+First, we need to figure out the model parameters
+```{r}
+modelFormula_AP <- 
+  AP ~ Severity*condition + 
+    (1 | StudyID/Sent/rep) + # Each Speaker (StudyID) read three sentences (Sent), five times each (rep)
+    (1 | ListenerID)
+
+brms::get_prior(
+  modelFormula_AP,
+  data = data_modelData_AP,
+  family = Beta
+)
+```
+
+Now we can specify weakly informative priors.
+```{r}
+prior_AP <- c(
+  prior(normal(0, 10), class = Intercept),
+  prior(normal(0, 10), class = b),
+  prior(cauchy(0, 10), class = sd),
+  prior(gamma(1, 0.5), class = phi) # Phi = 1, mu = .5
+)
+```
+
+### Building the model
+```{r}
+model_AP <- brms::brm(
+  formula = modelFormula_AP,
+  data = data_modelData_AP,
+  prior = prior_AP,
+  family = Beta,
+  chains = 4,
+  cores = 4,
+  iter = 4000,
+  warmup = 1000,
+  control = list(adapt_delta = 0.95),
+  file = "Models/brms_AP.rds",
+  file_refit = "on_change"
+)
+```
+
+### Model Summary
+```{r}
+# Probability of direction (pd)
+pd_AP <- bayestestR::p_direction(model_AP) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "Intercept", "(Intercept)", term))
+
+# Model results
+modelSummary_AP <- tidy(model_AP) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_AP, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_AP)
+```
+### Model Diagnostics
+```{r}
+# Assess chain mixing
+plot_chainMix_AP <- base::plot(model_AP, ask=FALSE)
+
+# Posterior predictive check
+plot_ppCheck_AP <- brms::pp_check(model_AP, ndraws = 1000)
+
+# Plot conditional effects
+plot_conditionalEffects_AP <- base::plot(conditional_effects(model_AP), ask = FALSE)
+
+# APerval Estimations
+data_posterior_AP <- as.matrix(model_AP) %>%
+  as.data.frame()
+
+plot_intervalEst_AP <- mcmc_areas(
+  data_posterior_AP,
+  pars = fixed_effects <- data_posterior_AP %>%
+    as.data.frame() %>%
+    dplyr::select(starts_with("b_")) %>%
+    colnames(),
+  # arbitrary threshold for shading probability mass
+  prob = 0.95
+) 
+
+```
+
+### Visualizations
+```{r}
+
+# Generate expected predictions from the posterio
+data_posterior_AP <- model_AP %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear")
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(Severity = factor(
+    Severity,
+    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+  ),
+  condition = factor(condition,
+                     levels = c("conv","moreClear"),
+                     labels = c("conversational", "clear")))
+
+plot_grandMean_AP <- ggplot(data_posterior_AP, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted articulatory precision rating", y = NULL,
+       fill = "Condition",
+       subtitle = "Posterior predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0,1)) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+epsilon <- 1e-5
+data_me_AP <- model_AP %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    #at = list(Severity = "Profound"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    .value = (.value - epsilon) / (1 - 2 * epsilon),
+    # Step 1 & 2: Reverse the offset and scaling
+    .value = .value * nrow(.) / ((nrow(.) - 1) + .5)
+  )
+
+
+plot_ame_AP <- ggplot(data_me_AP, aes(x = .value, y = Severity)) +
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(x = "Average marginal effect of condition",
+       y = NULL,
+       subtitle = "Condition effect (clear - conversational)") +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+# Combined plot
+plot_AP <- (plot_grandMean_AP | plot_ame_AP) +
+  plot_annotation(title = "Articulatory Precision",
+                  subtitle = "Predicted articulatory precision ratings across group/severity and speaking conditions.",
+                  theme = theme_clean())
+ggsave(
+  plot = plot_AP,
+  filename = "Plots/plot_AP.png",
+  height = 6,
+  width = 8,
+  unit = "in",
+  scale = 1,
+  bg = "white"
+)
+```
+
+## aVSA
+Acoustic Vowel Space Area (aVSA) is an acoustic measure of articulatory working space. There are known sex differences when aVSA is measured in Hz. Therefore, we will measure it in Bark to try to reduce the sex effects.
+
+The bark transformed aVSA measure ranges from .8 - 18 Bark. So it is a measure bound by 0, with no negative values. For this reason, we will use a lognormal family.
+### Loading the data
+```{r}
+vsaMeasures <- rio::import(file = "https://raw.githubusercontent.com/AustinRThompson/multidomain-vowelArtic-PD/main/Data/PreppedData/CollatedData/TargetMeasures_vsaMeasures.csv") %>%
+  dplyr::filter(condition != "lessClear") %>% # We won't use the less clear condition in this study
+  
+  # Here we rename some variables and clean up the factors
+  dplyr::mutate(Sex = factor(Sex, levels = c("M", "F")),
+                condition = factor(condition, levels = c("conv", "moreClear"))) %>%
+  
+  # Now we merge the data with the speakerList, which has information about severity level.
+  base::merge(., speakerList %>%
+                dplyr::select(StudyID, Severity)) %>%
+  dplyr::mutate(
+    Severity = factor(
+      Severity,
+      levels = c("HC", "Mild", "Moderate", "Severe", "Profound"),
+      labels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+    )
+  )
+
+# Lets visualize the outcome measure, aVSA_bark
+hist(vsaMeasures$aVSA_bark)
+
+data_modelData_aVSA <- vsaMeasures
+performance::check_distribution(data_modelData_aVSA$aVSA_bark)
+
+# Taking out the trash
+rm(vsaMeasures)
+```
+
+### Priors
+First, we need to figure out the model parameters
+```{r}
+modelFormula_aVSA <- 
+  aVSA_bark ~ 
+  Severity * condition +
+  (1 | StudyID) # Here, we only have one aVSA value per speaker and condition
+
+brms::get_prior(
+  formula = modelFormula_aVSA,
+  data = data_modelData_aVSA,
+  family = lognormal())
+```
+Now we can specify weakly informative priors.
+```{r}
+# specify priors in log space
+priors_aVSA <- c(
+  prior(normal(0, 10), class = Intercept),
+  prior(normal(0, 10), class = b),
+  prior(cauchy(0, 10), class = sd),
+  prior(cauchy(0, 10), class = sigma)
+)
+```
+
+### Building the model
+```{r}
+
+model_aVSA <- brms::brm(
+  formula = modelFormula_aVSA,
+  data = data_modelData_aVSA,
+  family = lognormal(),
+  prior = priors_aVSA,
+  chains = 4,
+  cores = 4,
+  iter = 4000,
+  warmup = 1000,
+  control = list(adapt_delta = 0.95),
+  file = "Models/brms_aVSA.rds",
+  file_refit = "on_change"
+)
+```
+
+### Model Summary
+```{r}
+# Probability of direction (pd)
+pd_aVSA <- bayestestR::p_direction(model_aVSA) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "Intercept", "(Intercept)", term))
+
+# Model results
+modelSummary_aVSA <- tidy(model_aVSA) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_aVSA, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_aVSA)
+```
+### Model Diagnostics
+```{r}
+# Assess chain mixing
+plot_chainMix_aVSA <- base::plot(model_aVSA, ask=FALSE)
+
+# Posterior predictive check
+plot_ppCheck_aVSA <- brms::pp_check(model_aVSA, ndraws = 1000)
+
+# Plot conditional effects
+plot_conditionalEffects_aVSA <- base::plot(conditional_effects(model_aVSA), ask = FALSE)
+
+# aVSAerval Estimations
+data_posterior_aVSA <- as.matrix(model_aVSA) %>%
+  as.data.frame()
+
+plot_intervalEst_aVSA <- mcmc_areas(
+  data_posterior_aVSA,
+  pars = fixed_effects <- data_posterior_aVSA %>%
+    as.data.frame() %>%
+    dplyr::select(starts_with("b_")) %>%
+    colnames(),
+  # arbitrary threshold for shading probability mass
+  prob = 0.95
+) 
+
+```
+
+### Visualizations
+```{r}
+
+# Generate expected predictions from the posterior
+data_posterior_aVSA <- model_aVSA %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear")
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(Severity = factor(
+    Severity,
+    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+  ),
+  condition = factor(condition,
+                     levels = c("conv","moreClear"),
+                     labels = c("conversational", "clear")))
+
+plot_grandMean_aVSA <- ggplot(data_posterior_aVSA, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted VSA (in Bark)", y = NULL,
+       fill = "Condition",
+       subtitle = "Posterior predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0,20)) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+data_me_aVSA <- model_aVSA %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    #at = list(Severity = "Profound"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws()
+
+
+plot_ame_aVSA <- ggplot(data_me_aVSA, aes(x = .value, y = Severity)) +
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(x = "Average marginal effect of condition",
+       y = NULL,
+       subtitle = "Condition effect (clear - conversational)") +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+# Combined plot
+plot_aVSA <- (plot_grandMean_aVSA | plot_ame_aVSA) +
+  plot_annotation(title = "Acoustic Vowel Space Area (VSA)",
+                  subtitle = "Predicted VSA (in Bark) across group/severity and speaking conditions.",
+                  theme = theme_clean())
+ggsave(
+  plot = plot_aVSA,
+  filename = "Plots/plot_aVSA.png",
+  height = 6,
+  width = 8,
+  unit = "in",
+  scale = 1,
+  bg = "white"
+)
+```
+
+## Kinematic Distance
+Kinematic distance was measured from the tongue back sensor (adhered 5 mm from the tongue tip) during the diphthong /ai/ in "buy". The 2D positions of the onset and offset were used to calculate the Euclidean distance. This measure ranges from 0.03 to 28 mm. So, it is bound by 0, and does not have any negative values. For this reason, we use the lognormal family.
+### Loading the data
+```{r}
+aiMeasures <-
+  rio::import(file = "https://raw.githubusercontent.com/AustinRThompson/multidomain-vowelArtic-PD/main/Data/PreppedData/CollatedData/TargetMeasures_aiMeasures.csv") %>%
+  dplyr::filter(condition != "lessClear") %>% # We won't use the less clear condition in this study
+  
+# Here we rename some variables and clean up the factors
+  dplyr::mutate(Sex = factor(Sex, levels = c("M", "F")),
+                condition = factor(condition, levels = c("conv", "moreClear"))) %>%
+  
+  # Now we merge the data with the speakerList, which has information about severity level.
+  base::merge(., speakerList %>%
+                dplyr::select(StudyID, Severity)) %>%
+  dplyr::mutate(
+    Severity = factor(
+      Severity,
+      levels = c("HC", "Mild", "Moderate", "Severe", "Profound"),
+      labels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+    )
+  ) %>%
+  dplyr::group_by(StudyID, Group, Sex, Severity, condition) %>%
+  dplyr::summarise(kinDistance = mean(kinDistance, na.rm = T)) %>%
+  dplyr::ungroup()
+
+# Lets visualize the outcome measure, kinDistance
+hist(aiMeasures$kinDistance)
+hist(log(aiMeasures$kinDistance + 1))
+
+data_modelData_kinDistance <- aiMeasures %>%
+  dplyr::mutate(kinDistance = kinDistance + 1) # applying a constant before the log transformation in the model
+
+performance::check_distribution(data_modelData_kinDistance$kinDistance)
+hist(log(data_modelData_kinDistance$kinDistance))
+
+# Taking out the trash
+rm(aiMeasures)
+```
+
+### Priors
+First, we need to figure out the model parameters
+```{r}
+
+modelFormula_kinDistance <-
+  kinDistance ~ Severity * condition +
+  (1 | StudyID) # Each Speaker (StudyID) has 2 kinDistance measures for each condition
+
+brms::get_prior(formula = modelFormula_kinDistance,
+                data = data_modelData_kinDistance,
+                family = lognormal)
+```
+
+Now we can specify weakly informative priors.
+```{r}
+priors_kinDistance <- c(
+  prior(normal(0, 10), class = Intercept),
+  prior(normal(0, 10), class = b),
+  prior(cauchy(0, 10), class = sigma),
+  prior(cauchy(0, 10), class = sd)
+)
+```
+
+### Building the model
+```{r}
+model_kinDistance <- brms::brm(
+  formula = modelFormula_kinDistance,
+  data = data_modelData_kinDistance,
+  family = lognormal,
+  prior = priors_kinDistance,
+  chains = 4,
+  cores = 4,
+  iter = 4000,
+  warmup = 1000,
+  control = list(adapt_delta = 0.95),
+  file = "Models/brms_kinDistance.rds",
+  file_refit = "on_change"
+)
+```
+
+
+### Model Summary
+```{r}
+# Probability of direction (pd)
+pd_kinDistance <- bayestestR::p_direction(model_kinDistance) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "Intercept", "(Intercept)", term))
+
+# Model results
+modelSummary_kinDistance <- tidy(model_kinDistance) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_kinDistance, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_kinDistance)
+```
+### Model Diagnostics
+```{r}
+# Assess chain mixing
+plot_chainMix_kinDistance <- base::plot(model_kinDistance, ask=FALSE)
+
+# Posterior predictive check
+plot_ppCheck_kinDistance <- brms::pp_check(model_kinDistance, ndraws = 1000)
+
+# Plot conditional effects
+plot_conditionalEffects_kinDistance <- base::plot(conditional_effects(model_kinDistance), ask = FALSE)
+
+# kinDistanceerval Estimations
+data_posterior_kinDistance <- as.matrix(model_kinDistance) %>%
+  as.data.frame()
+
+plot_intervalEst_kinDistance <- mcmc_areas(
+  data_posterior_kinDistance,
+  pars = fixed_effects <- data_posterior_kinDistance %>%
+    as.data.frame() %>%
+    dplyr::select(starts_with("b_")) %>%
+    colnames(),
+  # arbitrary threshold for shading probability mass
+  prob = 0.95
+) 
+
+```
+
+
+### Visualizations
+```{r}
+
+# Generate expected predictions from the posterior
+data_posterior_kinDistance <- model_kinDistance %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear")
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(Severity = factor(
+    Severity,
+    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+  ),
+  condition = factor(condition,
+                     levels = c("conv","moreClear"),
+                     labels = c("conversational", "clear")))
+
+plot_grandMean_kinDistance <- ggplot(data_posterior_kinDistance, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted kinematic distance (mm)", y = NULL,
+       fill = "Condition",
+       subtitle = "Posterior predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0,43)) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+data_me_kinDistance <- model_kinDistance %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws()
+
+
+plot_ame_kinDistance <- ggplot(data_me_kinDistance, aes(x = .value, y = Severity)) +
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(x = "Average marginal effect of condition",
+       y = NULL,
+       subtitle = "Condition effect (clear - conversational)") +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+# Combined plot
+plot_kinDistance <- (plot_grandMean_kinDistance | plot_ame_kinDistance) +
+  plot_annotation(title = "Kinematic Distance",
+                  subtitle = "Predicted kinematic distance (mm) for /aɪ/ across group/severity and speaking conditions.",
+                  theme = theme_clean())
+ggsave(
+  plot = plot_kinDistance,
+  filename = "Plots/plot_kinDistance.png",
+  height = 6,
+  width = 8,
+  unit = "in",
+  scale = 1,
+  bg = "white"
+)
+```
+
+
+# Model Tables
+```{r}
+sjPlot::tab_model(model_aVSA,
+                  file = "Tables/modelInt.html")
+```
+
