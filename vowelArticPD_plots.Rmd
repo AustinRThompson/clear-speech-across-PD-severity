@@ -1,0 +1,755 @@
+---
+title: "Vowel Artic in PD: Plots"
+output: html_notebook
+---
+
+# Packages
+```{r}
+library(tidyverse)
+library(ggrepel)
+library(extraDistr)   # install.packages("extraDistr")
+library(HDInterval)   # install.packages("HDAPerval")
+library(tidybayes)    # install.packages("tidybayes")
+library(bayesplot)    # install.packages("bayesplot")
+library(modelr)
+library(broom.mixed)  # install.packages("broom.mixed")
+library(brms)         # install.packages("brms")
+library(ggthemes)
+library(patchwork)
+theme_set(theme_minimal())
+
+# Creating a theme function used for visualizations
+theme_clean <- function() {
+  theme_minimal(base_family = "Arial") +
+    theme(panel.grid.minor = element_blank(),
+          plot.title = element_text(face = "bold"),
+          axis.title = element_text(face = "bold"),
+          strip.text = element_text(face = "bold", size = rel(1), hjust = 0),
+          strip.background = element_rect(fill = "grey80", color = NA),
+          legend.title = element_text(face = "bold"))
+}
+```
+
+# Loading the models
+```{r}
+model_Int <- base::readRDS(file = "Models/brms_Int.rds")
+model_AP <- base::readRDS(file = "Models/brms_AP.rds")
+model_aVSA <- base::readRDS(file = "Models/brms_aVSA.rds")
+model_kinDistance <- base::readRDS(file = "Models/brms_kinDistance.rds")
+model_kinDistance_duration <- base::readRDS(file = "Models/brms_kinDistance_duration.rds")
+```
+
+# Formatting info
+```{r}
+textSize_plotTitle <- 9
+textSize_plotSubtitle <- 9
+textSize_axisTitle <- 9
+```
+
+
+# Figure 1 - Intelligibility
+## Expected Posteriors
+```{r}
+epsilon <- 1e-5
+# Generate expected predictions from the posterior
+data_posterior_Int <- model_Int %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear")
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(
+    Severity = factor(
+      Severity,
+      levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+    ),
+    condition = factor(
+      condition,
+      levels = c("conv", "moreClear"),
+      labels = c("conversational", "clear")
+    ),
+    .epred = (.epred - epsilon) / (1 - 2 * epsilon),
+    # Step 1 & 2: Reverse the offset and scaling
+    .epred = .epred * nrow(.) / ((nrow(.) - 1) + .5)
+  )
+
+plot_grandMean_Int <- ggplot(data_posterior_Int, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted intelligibility rating", y = NULL,
+       fill = "Condition",
+       title = "Posterior Predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0,1)) +
+  theme_clean() +
+  theme(legend.position = "bottom",
+        axis.title = element_text(size = textSize_axisTitle),
+        plot.title = element_text(size = textSize_plotTitle),
+        plot.subtitle = element_text(size = textSize_plotSubtitle))
+```
+
+## ME: Group
+```{r}
+epsilon <- 1e-5
+data_meGroup_Int <- model_Int %>%
+  emmeans::emmeans( ~  Severity,
+                    at = list(condition = "conv"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    .value = (.value - epsilon) / (1 - 2 * epsilon),
+    # Step 1 & 2: Reverse the offset and scaling
+    .value = .value * nrow(.) / ((nrow(.) - 1) + .5),
+    contrast = factor(contrast,
+                      levels = c(
+                        " ",
+                        "Mild - Control",
+                        "Moderate - Control",
+                        "Severe - Control",
+                        "Profound - Control"
+                        #"Moderate - Mild",
+                        #"Severe - Moderate",
+                        #"Profound - Severe"
+                      ))
+  ) %>%
+  dplyr::filter(!is.na(contrast))
+
+plot_ameGroup_Int <- ggplot(data_meGroup_Int, aes(x = .value, y = contrast)) +
+  geom_vline(xintercept = 0, alpha = .5) + 
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of group",
+    y = NULL,
+    title = "Research Question 1",
+    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    ) +
+  scale_y_discrete(limits = rev, drop = FALSE) +
+  annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
+  theme_clean() +
+  theme(legend.position = "bottom",
+        axis.title = element_text(size = textSize_axisTitle),
+        plot.title = element_text(size = textSize_plotTitle),
+        plot.subtitle = element_text(size = textSize_plotSubtitle))
+plot_ameGroup_Int
+```
+## ME: Group x Condition
+```{r}
+epsilon <- 1e-5
+data_meGroupCondition_Int <- model_Int %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    #at = list(Severity = "Profound"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    .value = (.value - epsilon) / (1 - 2 * epsilon),
+    # Step 1 & 2: Reverse the offset and scaling
+    .value = .value * nrow(.) / ((nrow(.) - 1) + .5)
+  )
+
+hypothesis(data_meGroupCondition_Int)
+bayestestR::p_direction(data_meGroupCondition_Int)
+
+plot_ameGroupCondition_Int <- ggplot(data_meGroupCondition_Int, aes(x = .value, y = Severity)) +
+  geom_vline(xintercept = 0, alpha = .5) +
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of condition",
+    y = NULL,
+    title = "Research Question 2",
+    subtitle = "Condition effect (clear - conversational)\nper group."
+    ) +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(legend.position = "bottom",
+        axis.title = element_text(size = textSize_axisTitle),
+        plot.title = element_text(size = textSize_plotTitle),
+        plot.subtitle = element_text(size = textSize_plotSubtitle))
+```
+
+
+## Combined
+```{r}
+# Combined plot
+plot_Int <-  plot_grandMean_Int + plot_ameGroup_Int + plot_ameGroupCondition_Int +
+  patchwork::plot_layout(ncol = 3, 
+              heights = c(1)) +
+  plot_annotation(title = "Intelligibility",
+                  #subtitle = "Predicted intelligibility ratings across group/severity and speaking conditions.",
+                  theme = theme_clean())
+plot_Int
+
+ggsave(
+  plot = plot_Int,
+  filename = "Plots/F1_Int.png",
+  height = 5,
+  width = 10,
+  unit = "in",
+  scale = .9,
+  bg = "white"
+)
+```
+
+# Figure 2 - Artic Precision
+## Expected Posteriors
+```{r}
+# Generate expected predictions from the posterio
+data_posterior_AP <- model_AP %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear")
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(Severity = factor(
+    Severity,
+    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+  ),
+  condition = factor(condition,
+                     levels = c("conv","moreClear"),
+                     labels = c("conversational", "clear")))
+
+plot_grandMean_AP <- ggplot(data_posterior_AP, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted articulatory precision rating", y = NULL,
+       fill = "Condition",
+       title = "Posterior Predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0,1)) +
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+```
+## ME: Group
+```{r}
+epsilon <- 1e-5
+data_meGroup_AP <- model_AP %>%
+  emmeans::emmeans( ~  Severity,
+                    at = list(condition = "conv"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    .value = (.value - epsilon) / (1 - 2 * epsilon),
+    # Step 1 & 2: Reverse the offset and scaling
+    .value = .value * nrow(.) / ((nrow(.) - 1) + .5),
+    contrast = factor(contrast,
+                      levels = c(
+                        " ",
+                        "Mild - Control",
+                        "Moderate - Control",
+                        "Severe - Control",
+                        "Profound - Control"
+                        #"Moderate - Mild",
+                        #"Severe - Moderate",
+                        #"Profound - Severe"
+                      ))
+  ) %>%
+  dplyr::filter(!is.na(contrast))
+
+plot_ameGroup_AP <- ggplot(data_meGroup_AP, aes(x = .value, y = contrast)) +
+  geom_vline(xintercept = 0, alpha = .5) +
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of group",
+    y = NULL,
+    title = "Research Question 1",
+    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    ) +
+  scale_y_discrete(limits = rev, drop = FALSE) +
+  annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+plot_ameGroup_AP
+```
+## ME: Group x Condition
+```{r}
+epsilon <- 1e-5
+data_meGroupCondition_AP <- model_AP %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    #at = list(Severity = "Profound"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    .value = (.value - epsilon) / (1 - 2 * epsilon),
+    # Step 1 & 2: Reverse the offset and scaling
+    .value = .value * nrow(.) / ((nrow(.) - 1) + .5)
+  )
+
+
+plot_ameGroupCondition_AP <- ggplot(data_meGroupCondition_AP, aes(x = .value, y = Severity)) +
+  geom_vline(xintercept = 0, alpha = .5) +
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of condition",
+    y = NULL,
+    title = "Research Question 2",
+    subtitle = "Condition effect (clear - conversational)\nper group."
+    ) +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+```
+
+## Combined
+```{r}
+# Combined plot
+plot_AP <- plot_grandMean_AP + plot_ameGroup_AP + plot_ameGroupCondition_AP +
+  patchwork::plot_layout(ncol = 3, 
+              heights = c(1)) +
+  plot_annotation(title = "Articulatory Precision",
+                  #subtitle = "Predicted articulatory precision ratings across group/severity and speaking conditions.",
+                  theme = theme_clean())
+ggsave(
+  plot = plot_AP,
+  filename = "Plots/F2_AP.png",
+  height = 5,
+  width = 10,
+  unit = "in",
+  scale = .9,
+  bg = "white"
+)
+```
+
+# Figure 3 - VSA
+## Expected Posteriors
+```{r}
+# Generate expected predictions from the posterior
+data_posterior_aVSA <- model_aVSA %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear")
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(Severity = factor(
+    Severity,
+    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+  ),
+  condition = factor(condition,
+                     levels = c("conv","moreClear"),
+                     labels = c("conversational", "clear")))
+
+plot_grandMean_aVSA <- ggplot(data_posterior_aVSA, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted VSA (in Bark)", y = NULL,
+       fill = "Condition",
+       title = "Posterior Predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0,20)) +
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+```
+
+## ME: Group
+```{r}
+data_meGroup_aVSA <- model_aVSA %>%
+  emmeans::emmeans( ~  Severity,
+                    at = list(condition = "conv"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    contrast = factor(contrast,
+                      levels = c(
+                        "",
+                        "Mild - Control",
+                        "Moderate - Control",
+                        "Severe - Control",
+                        "Profound - Control"
+                        #"Moderate - Mild",
+                        #"Severe - Moderate",
+                        #"Profound - Severe"
+                      ))
+  ) %>%
+  dplyr::filter(!is.na(contrast))
+
+plot_ameGroup_aVSA <- ggplot(data_meGroup_aVSA, aes(x = .value, y = contrast)) +
+  geom_vline(xintercept = 0, alpha = .5) + 
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of group",
+    y = NULL,
+    title = "Research Question 1",
+    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    ) +
+  scale_y_discrete(limits = rev, drop = F) +
+  annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+plot_ameGroup_aVSA
+```
+
+## ME: Group x Condition
+```{r}
+data_meGroupCondition_aVSA <- model_aVSA %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    #at = list(Severity = "Profound"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws()
+
+
+plot_ameGroupCondition_aVSA <- ggplot(data_meGroupCondition_aVSA, aes(x = .value, y = Severity)) +
+  geom_vline(xintercept = 0, alpha = .5) + 
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of condition",
+    y = NULL,
+    title = "Research Question 2",
+    subtitle = "Condition effect (clear - conversational)\nper group."
+    ) +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+```
+
+
+## Combined
+```{r}
+# Combined plot
+plot_aVSA <- plot_grandMean_aVSA + plot_ameGroup_aVSA + plot_ameGroupCondition_aVSA +
+  patchwork::plot_layout(ncol = 3, 
+              heights = c(1)) +
+  plot_annotation(title = "Acoustic Vowel Space Area (VSA)",
+                  #subtitle = "Predicted VSA (in Bark) across group/severity and speaking conditions.",
+                  theme = theme_clean())
+ggsave(
+  plot = plot_aVSA,
+  filename = "Plots/F3_aVSA.png",
+  height = 5,
+  width = 10,
+  unit = "in",
+  scale = .9,
+  bg = "white"
+)
+```
+# Figure 4 - KinDistance
+## Expected Posteriors
+```{r}
+# Generate expected predictions from the posterior
+data_posterior_kinDistance <- model_kinDistance %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear")
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(Severity = factor(
+    Severity,
+    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+  ),
+  condition = factor(condition,
+                     levels = c("conv","moreClear"),
+                     labels = c("conversational", "clear")))
+
+plot_grandMean_kinDistance <- ggplot(data_posterior_kinDistance, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted kinematic distance (mm)", y = NULL,
+       fill = "Condition",
+       title = "Posterior Predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0, 43)) +
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+```
+
+## ME: Group
+```{r}
+data_meGroup_kinDistance <- model_kinDistance %>%
+  emmeans::emmeans( ~  Severity,
+                    at = list(condition = "conv"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    contrast = factor(contrast,
+                      levels = c(
+                        "",
+                        "Mild - Control",
+                        "Moderate - Control",
+                        "Severe - Control",
+                        "Profound - Control"
+                        #"Moderate - Mild",
+                        #"Severe - Moderate",
+                        #"Profound - Severe"
+                      ))
+  ) %>%
+  dplyr::filter(!is.na(contrast))
+
+plot_ameGroup_kinDistance <- ggplot(data_meGroup_kinDistance, aes(x = .value, y = contrast)) +
+  geom_vline(xintercept = 0, alpha = .5) + 
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of group",
+    y = NULL,
+    title = "Research Question 1",
+    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    ) +
+  scale_y_discrete(limits = rev, drop = F) +
+  annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+plot_ameGroup_kinDistance
+```
+
+## ME: Group x Condition
+```{r}
+data_meGroupCondition_kinDistance <- model_kinDistance %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    #at = list(Severity = "Profound"),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws()
+
+
+plot_ameGroupCondition_kinDistance <- ggplot(data_meGroupCondition_kinDistance, aes(x = .value, y = Severity)) +
+  geom_vline(xintercept = 0, alpha = .5) + 
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of condition",
+    y = NULL,
+    title = "Research Question 2",
+    subtitle = "Condition effect (clear - conversational)\nper group."
+    ) +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+```
+
+## Combined
+```{r}
+# Combined plot
+plot_kinDistance <- plot_grandMean_kinDistance + plot_ameGroup_kinDistance + plot_ameGroupCondition_kinDistance +
+  patchwork::plot_layout(ncol = 3, 
+              heights = c(1)) +
+  plot_annotation(title = "Kinematic Distance",
+                  #subtitle = "Predicted kinematic distance (mm) for /aɪ/ across group/severity and speaking conditions.",
+                  theme = theme_clean())
+ggsave(
+  plot = plot_kinDistance,
+  filename = "Plots/F4_kinDistance.png",
+  height = 5,
+  width = 10,
+  unit = "in",
+  scale = .9,
+  bg = "white"
+)
+```
+
+# Figure 5 - KinDistance + Duration
+## Expected Posteriors
+```{r}
+
+avg_duration <- mean(model_kinDistance_duration$data$duration, na.rm = T)
+# Generate expected predictions from the posterior
+data_posterior_kinDistance <- model_kinDistance_duration %>%
+  tidybayes::epred_draws(
+    newdata = tidyr::expand_grid(
+      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
+      condition = c("conv", "moreClear"),
+      duration = avg_duration,
+    ),
+    re_formula = NA
+  ) %>%
+  dplyr::mutate(Severity = factor(
+    Severity,
+    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+  ),
+  condition = factor(condition,
+                     levels = c("conv","moreClear"),
+                     labels = c("conversational", "clear")))
+
+plot_grandMean_kinDistance <- ggplot(data_posterior_kinDistance, 
+                                   aes(x = .epred, y = Severity, 
+                                       fill = condition)) +
+  stat_halfeye() +
+  ggokabeito::scale_fill_okabe_ito() +
+  labs(x = "Predicted kinematic distance (mm)", y = NULL,
+       fill = "Condition",
+       title = "Posterior Predictions") +
+  scale_y_discrete(limits = rev) +
+  coord_cartesian(xlim = c(0, 43)) +
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+```
+
+## ME: Group
+```{r}
+data_meGroup_kinDistance <- model_kinDistance_duration %>%
+  emmeans::emmeans( ~  Severity,
+                    at = list(condition = "conv",
+                              duration = avg_duration),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws() %>%
+  dplyr::mutate(
+    contrast = factor(contrast,
+                      levels = c(
+                        "",
+                        "Mild - Control",
+                        "Moderate - Control",
+                        "Severe - Control",
+                        "Profound - Control"
+                        #"Moderate - Mild",
+                        #"Severe - Moderate",
+                        #"Profound - Severe"
+                      ))
+  ) %>%
+  dplyr::filter(!is.na(contrast))
+
+plot_ameGroup_kinDistance <- ggplot(data_meGroup_kinDistance, aes(x = .value, y = contrast)) +
+  geom_vline(xintercept = 0, alpha = .5) + 
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of group",
+    y = NULL,
+    title = "Research Question 1",
+    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    ) +
+  scale_y_discrete(limits = rev, drop = F) +
+  annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+plot_ameGroup_kinDistance
+```
+
+## ME: Group x Condition
+```{r}
+data_meGroupCondition_kinDistance <- model_kinDistance_duration %>%
+  emmeans::emmeans( ~ condition | Severity,
+                    at = list(duration = avg_duration),
+                    epred = TRUE,
+                    re_formula = NA,
+                    ) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  gather_emmeans_draws()
+
+plot_ameGroupCondition_kinDistance <- ggplot(data_meGroupCondition_kinDistance, aes(x = .value, y = Severity)) +
+  geom_vline(xintercept = 0, alpha = .5) + 
+  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
+  labs(
+    x = "Average marginal effect of condition",
+    y = NULL,
+    title = "Research Question 2",
+    subtitle = "Condition effect (clear - conversational)\nper group."
+    ) +
+  scale_y_discrete(limits = rev) +
+  theme_clean() +
+  theme(
+    legend.position = "bottom",
+    axis.title = element_text(size = textSize_axisTitle),
+    plot.title = element_text(size = textSize_plotTitle),
+    plot.subtitle = element_text(size = textSize_plotSubtitle)
+  )
+```
+
+## Combined
+```{r}
+# Combined plot
+plot_kinDistance <- plot_grandMean_kinDistance + plot_ameGroup_kinDistance + plot_ameGroupCondition_kinDistance +
+  patchwork::plot_layout(ncol = 3, 
+              heights = c(1)) +
+  plot_annotation(title = "Kinematic Distance + Duration",
+                  #subtitle = "Predicted kinematic distance (mm) for /aɪ/ across group/severity and speaking conditions.",
+                  theme = theme_clean())
+ggsave(
+  plot = plot_kinDistance,
+  filename = "Plots/F4_kinDistance_duration.png",
+  height = 5,
+  width = 10,
+  unit = "in",
+  scale = .9,
+  bg = "white"
+)
+```

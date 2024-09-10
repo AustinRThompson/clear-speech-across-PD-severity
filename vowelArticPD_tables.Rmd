@@ -1,0 +1,628 @@
+---
+title: "Vowel Artic in PD: Tables"
+output: html_notebook
+---
+
+# Packages
+```{r}
+library(tidyverse)
+library(extraDistr)   # install.packages("extraDistr")
+library(HDInterval)   # install.packages("HDAPerval")
+library(tidybayes)    # install.packages("tidybayes")
+library(bayesplot)    # install.packages("bayesplot")
+library(modelr)
+library(broom.mixed)  # install.packages("broom.mixed")
+library(brms)         # install.packages("brms")
+library(ggthemes)
+theme_set(theme_minimal())
+```
+
+# Load the data
+```{r}
+# Loading the models
+
+model_Int <- base::readRDS(file = "Models/brms_Int.rds")
+model_AP <- base::readRDS(file = "Models/brms_AP.rds")
+model_aVSA <- base::readRDS(file = "Models/brms_aVSA.rds")
+model_kinDistance <- base::readRDS(file = "Models/brms_kinDistance.rds")
+
+# Loading the residual variance values
+variance_Int <- base::readRDS(file = "Models/variance_Int.rds")
+variance_AP <- base::readRDS(file = "Models/variance_AP.rds")
+variance_aVSA <- base::readRDS(file = "Models/variance_aVSA.rds")
+variance_kinDistance <- base::readRDS(file = "Models/variance_kinDistance.rds")
+```
+
+# Tables 2 & 3 - Model Results
+## Model Summaries
+### Intelligibility
+```{r}
+# Probability of direction (pd)
+pd_Int <- bayestestR::p_direction(model_Int) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "Intercept", "(Intercept)", term))
+
+# Model results
+modelSummary_Int <- tidy(model_Int) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_Int, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    estimate_natScale = plogis(estimate),
+    l_95_CI_natScale = plogis(l_95_CI),
+    u_95_CI_natScale = plogis(u_95_CI),
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_Int)
+```
+### Articulatory Precision
+```{r}
+# Probability of direction (pd)
+pd_AP <- bayestestR::p_direction(model_AP) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "APercept", "(APercept)", term))
+
+# Model results
+modelSummary_AP <- tidy(model_AP) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_AP, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    estimate_natScale = plogis(estimate),
+    l_95_CI_natScale = plogis(l_95_CI),
+    u_95_CI_natScale = plogis(u_95_CI),
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_AP)
+```
+### aVSA
+```{r}
+# Probability of direction (pd)
+pd_aVSA <- bayestestR::p_direction(model_aVSA) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "aVSAercept", "(aVSAercept)", term))
+
+# Model results
+modelSummary_aVSA <- tidy(model_aVSA) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_aVSA, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    estimate_natScale = plogis(estimate),
+    l_95_CI_natScale = plogis(l_95_CI),
+    u_95_CI_natScale = plogis(u_95_CI),
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_aVSA)
+```
+### kinDistance
+```{r}
+# Probability of direction (pd)
+pd_kinDistance <- bayestestR::p_direction(model_kinDistance) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "kinDistanceercept", "(kinDistanceercept)", term))
+
+# Model results
+modelSummary_kinDistance <- tidy(model_kinDistance) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_kinDistance, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    estimate_natScale = plogis(estimate),
+    l_95_CI_natScale = plogis(l_95_CI),
+    u_95_CI_natScale = plogis(u_95_CI),
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_kinDistance)
+```
+
+## Model Tables
+```{r}
+summaryTable_fixed <- base::merge(
+  
+  modelSummary_Int %>%
+    dplyr::filter(effect == "fixed") %>%
+    dplyr::select(term,
+                  Int_estimate = estimate,
+                  Int_l_95_CI = l_95_CI,
+                  Int_u_95_CI = u_95_CI,
+                  Int_pd = pd,
+                  Int_robust = robust) %>%
+    dplyr::mutate(term = as.factor(term)),
+  
+  modelSummary_AP %>%
+    dplyr::filter(effect == "fixed") %>%
+    dplyr::select(term,
+                  AP_estimate = estimate,
+                  AP_l_95_CI = l_95_CI,
+                  AP_u_95_CI = u_95_CI,
+                  AP_pd = pd,
+                  AP_robust = robust) %>%
+    dplyr::mutate(term = as.factor(term))) %>%
+  
+  base::merge(
+    .,
+    modelSummary_aVSA %>%
+      dplyr::filter(effect == "fixed") %>%
+      dplyr::select(
+        term,
+        aVSA_estimate = estimate,
+        aVSA_l_95_CI = l_95_CI,
+        aVSA_u_95_CI = u_95_CI,
+        aVSA_pd = pd,
+                  aVSA_robust = robust
+      ) %>%
+      dplyr::mutate(term = as.factor(term))
+  ) %>%
+  
+  base::merge(
+    .,
+    modelSummary_kinDistance %>%
+      dplyr::filter(effect == "fixed") %>%
+      dplyr::select(
+        term,
+        kinDistance_estimate = estimate,
+        kinDistance_l_95_CI = l_95_CI,
+        kinDistance_u_95_CI = u_95_CI,
+        kinDistance_pd = pd,
+                  kinDistance_robust = robust
+      ) %>%
+      dplyr::mutate(term = as.factor(term))
+  ) %>%
+  
+  # Making the terms prettier
+  dplyr::mutate(
+    Int_CI_95 = paste0(
+      round(Int_l_95_CI, digits = 2), " – ",
+      round(Int_u_95_CI, digits = 2)
+    ),
+    AP_CI_95 = paste0(
+      round(AP_l_95_CI, digits = 2), " – ",
+      round(AP_u_95_CI, digits = 2)),
+    aVSA_CI_95 = paste0(
+      round(aVSA_l_95_CI, digits = 2), " – ",
+      round(aVSA_u_95_CI, digits = 2)
+    ),
+    kinDistance_CI_95 = paste0(
+      round(kinDistance_l_95_CI, digits = 2), " – ",
+      round(kinDistance_u_95_CI, digits = 2)
+    ),
+    
+    terms = factor(
+      term,
+      levels = c(
+        "(Intercept)",
+        "SeverityMild",
+        "SeverityModerate",
+        "SeveritySevere",
+        "SeverityProfound",
+        "conditionmoreClear",
+        "SeverityMild:conditionmoreClear",
+        "SeverityModerate:conditionmoreClear",
+        "SeveritySevere:conditionmoreClear",
+        "SeverityProfound:conditionmoreClear"
+      ),
+      labels = c(
+        "Intercept (Control × Conversational)",
+        "Mild × Conversational",
+        "Moderate × Conversational",
+        "Severe × Conversational",
+        "Profound × Conversational",
+        "Control × Clear",
+        "Mild × Clear",
+        "Moderate × Clear",
+        "Severe × Clear",
+        "Profound × Clear"
+      ),
+    )) %>% 
+  dplyr::relocate(terms, .after = term) %>%
+  arrange(terms)
+
+
+summaryTable_fixed %>%
+  dplyr::select(!c(term,
+                Int_l_95_CI, Int_u_95_CI,
+                AP_l_95_CI, AP_u_95_CI,
+                aVSA_l_95_CI, aVSA_u_95_CI,
+                kinDistance_l_95_CI, kinDistance_u_95_CI)) %>%
+  gt::gt() |>
+  gt::tab_spanner(
+    columns = c(Int_estimate,
+               Int_CI_95,
+               Int_pd),
+    label = "Intelligibility"
+  ) |>
+  gt::tab_spanner(
+    columns = c(AP_estimate,
+               AP_CI_95,
+               AP_pd),
+    label = "Articulatory Precision"
+  ) |>
+  gt::tab_spanner(
+    columns = c(aVSA_estimate,
+               aVSA_CI_95,
+               aVSA_pd),
+    label = "Vowel Space Area"
+  ) |>
+  gt::tab_spanner(
+    columns = c(kinDistance_estimate,
+               kinDistance_CI_95,
+               kinDistance_pd),
+    label = "Kinematic Distance"
+  ) |>
+  gt::fmt_number(columns = Int_estimate:kinDistance_pd,
+                 decimals = 2) |>
+  gt::fmt_percent(columns = c(Int_pd,
+                             AP_pd,
+                             aVSA_pd,
+                             kinDistance_pd), ) |>
+  gt::cols_label(
+    terms = "Predictors",
+    Int_estimate = "Estimates",
+    AP_estimate = "Estimates",
+    aVSA_estimate = "Estimates",
+    kinDistance_estimate = "Estimates",
+    Int_CI_95 = "CI (95%)",
+    AP_CI_95 = "CI (95%)",
+    aVSA_CI_95 = "CI (95%)",
+    kinDistance_CI_95 = "CI (95%)",
+    Int_pd = "pd",
+    AP_pd = "pd",
+    aVSA_pd = "pd",
+    kinDistance_pd = "pd",
+  ) %>%
+  gt::cols_align(align = "left",
+                 columns = terms) |>
+  # Bolding for robust effects
+  ## Intelligibility
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(Int_estimate,
+                                           Int_CI_95,
+                                           Int_pd),
+                               rows = Int_robust == "robust")
+  ) |> 
+  ## Articulatory precision
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(AP_estimate,
+                                           AP_CI_95,
+                                           AP_pd),
+                               rows = AP_robust == "robust")
+  ) |> 
+  ## aVSA
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(aVSA_estimate,
+                                           aVSA_CI_95,
+                                           aVSA_pd),
+                               rows = aVSA_robust == "robust")
+  ) |> 
+  ## Kinematic Distance
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(kinDistance_estimate,
+                                           kinDistance_CI_95,
+                                           kinDistance_pd),
+                               rows = kinDistance_robust == "robust")
+  ) |> 
+  gt::cols_hide(
+    columns = c(Int_robust,
+                AP_robust,
+                aVSA_robust,
+                kinDistance_robust)
+  ) |>
+  
+  gt::gtsave(filename = "Tables/brmsModel_FixedEffects.html")
+
+summaryTable_random <- data.frame(
+  randomEffect = c("σ^2",
+                   "N_StudyID",
+                   "N_ListenerID",
+                   "Observations"),
+  Int = c(
+    format(round(variance_Int$var.residual, 3), nsmall = 3),
+    summary(model_Int)[["ngrps"]][["StudyID"]],
+    summary(model_Int)[["ngrps"]][["ListenerID"]],
+    summary(model_Int)[["nobs"]]
+  ),
+  AP = c(
+    format(round(variance_AP$var.residual, 3), nsmall = 3),
+    summary(model_AP)[["ngrps"]][["StudyID"]],
+    summary(model_AP)[["ngrps"]][["ListenerID"]],
+    summary(model_AP)[["nobs"]]
+  ),
+  aVSA = c(
+    format(round(variance_aVSA$var.residual, 3), nsmall = 3),
+    summary(model_aVSA)[["ngrps"]][["StudyID"]],
+    "",
+    summary(model_aVSA)[["nobs"]]
+  ),
+  kinDistance = c(
+    format(round(variance_kinDistance$var.residual, 3), nsmall = 3),
+    summary(model_kinDistance)[["ngrps"]][["StudyID"]],
+    "",
+    summary(model_kinDistance)[["nobs"]]
+  )
+) |>
+  gt::gt() |>
+  gt::gtsave(filename = "Tables/brmsModel_RandomEffects.html")
+
+```
+
+# Table 4 - Post Hoc Emmeans
+This table contains the pairwise comparisons between clear - conversational for each measure and group.
+## Pairwise Comparisons
+### Intelligibility
+```{r}
+# Probability of direction (pd)
+pd_emmeans_kinDistance <- bayestestR::p_direction(
+  model_kinDistance %>%
+    emmeans::emmeans(
+      ~ condition | Severity,
+      epred = TRUE,
+      re_formula = NA,
+    ) %>%
+    emmeans::contrast(method = "revpairwise")
+) |>
+  as.data.frame() %>%
+  dplyr::mutate(Severity = gsub(pattern = "moreClear - conv ", replacement = "", Parameter)) %>%
+  as.data.frame() |>
+  dplyr::select(!Parameter)
+
+
+emmeans_kinDistance <- model_kinDistance %>%
+  emmeans::emmeans(~ condition | Severity,
+                   epred = TRUE,
+                   re_formula = NA,) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  tidy() |>
+  dplyr::rename(l_95_HPD = lower.HPD,
+                u_95_HPD = upper.HPD) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(., pd_emmeans_kinDistance) |>
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_HPD <= 0 & u_95_HPD > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    ),
+    writeUp = paste0("β=",rd(estimate, digits = 2),", 95% HPD Interval = [",
+                     rd(l_95_HPD, digits = 2), ", ",
+                     rd(u_95_HPD, digits = 2), "]")
+  )
+
+rm(pd_emmeans_kinDistance)
+```
+
+### AP
+```{r}
+
+# Probability of direction (pd)
+pd_emmeans_AP <- bayestestR::p_direction(
+  model_AP %>%
+    emmeans::emmeans(
+      ~ condition | Severity,
+      epred = TRUE,
+      re_formula = NA,
+    ) %>%
+    emmeans::contrast(method = "revpairwise")
+) |>
+  as.data.frame() %>%
+  dplyr::mutate(Severity = gsub(pattern = "moreClear - conv ", replacement = "", Parameter)) %>%
+  as.data.frame() |>
+  dplyr::select(!Parameter)
+
+
+emmeans_AP <- model_AP %>%
+  emmeans::emmeans(~ condition | Severity,
+                   epred = TRUE,
+                   re_formula = NA,) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  tidy() |>
+  dplyr::rename(l_95_HPD = lower.HPD,
+                u_95_HPD = upper.HPD) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(., pd_emmeans_AP) |>
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_HPD <= 0 & u_95_HPD > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    ),
+    writeUp = paste0("β=",rd(estimate, digits = 2),", 95% HPD Interval = [",
+                     rd(l_95_HPD, digits = 2), ", ",
+                     rd(u_95_HPD, digits = 2), "]")
+  )
+
+rm(pd_emmeans_AP)
+```
+
+### aVSA
+```{r}
+
+# Probability of direction (pd)
+pd_emmeans_aVSA <- bayestestR::p_direction(
+  model_aVSA %>%
+    emmeans::emmeans(
+      ~ condition | Severity,
+      epred = TRUE,
+      re_formula = NA,
+    ) %>%
+    emmeans::contrast(method = "revpairwise")
+) |>
+  as.data.frame() %>%
+  dplyr::mutate(Severity = gsub(pattern = "moreClear - conv ", replacement = "", Parameter)) %>%
+  as.data.frame() |>
+  dplyr::select(!Parameter)
+
+
+emmeans_aVSA <- model_aVSA %>%
+  emmeans::emmeans(~ condition | Severity,
+                   epred = TRUE,
+                   re_formula = NA,) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  tidy() |>
+  dplyr::rename(l_95_HPD = lower.HPD,
+                u_95_HPD = upper.HPD) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(., pd_emmeans_aVSA) |>
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_HPD <= 0 & u_95_HPD > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    ),
+    writeUp = paste0("β=",rd(estimate, digits = 2),", 95% HPD Interval = [",
+                     rd(l_95_HPD, digits = 2), ", ",
+                     rd(u_95_HPD, digits = 2), "]")
+  )
+
+rm(pd_emmeans_aVSA)
+```
+
+### Kinematic Distance
+```{r}
+
+# Probability of direction (pd)
+pd_emmeans_kinDistance <- bayestestR::p_direction(
+  model_kinDistance %>%
+    emmeans::emmeans(
+      ~ condition | Severity,
+      epred = TRUE,
+      re_formula = NA,
+    ) %>%
+    emmeans::contrast(method = "revpairwise")
+) |>
+  as.data.frame() %>%
+  dplyr::mutate(Severity = gsub(pattern = "moreClear - conv ", replacement = "", Parameter)) %>%
+  as.data.frame() |>
+  dplyr::select(!Parameter)
+
+
+emmeans_kinDistance <- model_kinDistance %>%
+  emmeans::emmeans(~ condition | Severity,
+                   epred = TRUE,
+                   re_formula = NA,) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  tidy() |>
+  dplyr::rename(l_95_HPD = lower.HPD,
+                u_95_HPD = upper.HPD) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(., pd_emmeans_kinDistance) |>
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_HPD <= 0 & u_95_HPD > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    ),
+    writeUp = paste0("β=",rd(estimate, digits = 2),", 95% HPD Interval = [",
+                     rd(l_95_HPD, digits = 2), ", ",
+                     rd(u_95_HPD, digits = 2), "]")
+  )
+
+rm(pd_emmeans_kinDistance)
+```
+
+## Creating the table
+```{r}
+T4_emmeans <- rbind(
+  emmeans_Int %>%
+    dplyr::mutate(Measure = "Intelligibility"),
+  
+  emmeans_AP %>%
+    dplyr::mutate(Measure = "Articulatory Precision"),
+  
+  emmeans_aVSA %>%
+    dplyr::mutate(Measure = "Vowel Space Area"),
+  
+  emmeans_kinDistance %>%
+    dplyr::mutate(Measure = "Kinematic Distance")
+  
+) %>%
+  dplyr::mutate(
+    estimate = weights::rd(estimate, digits = 2),
+    HPD_95 = paste0(weights::rd(l_95_HPD, digits = 2),
+                    " – ",
+                    weights::rd(u_95_HPD, digits = 2)
+  )) |>
+  dplyr::select(Measure,Severity,estimate,HPD_95,pd, robust) |>
+  dplyr::ungroup() |>
+  dplyr::group_by(Measure) %>%
+  gt::gt(row_group_as_column = TRUE) %>%
+  gt::tab_stubhead(label = "Measure") |>
+  gt::fmt_percent(pd) |>
+  gt::cols_label(
+    Severity = "Group",
+    estimate = "Estimate",
+    HPD_95 = "HPD (95%)"
+  ) |>
+  gt::cols_align(columns = HPD_95,
+                 align = "right") |>
+  # Bolding for robust effects
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(estimate,
+                                           HPD_95,
+                                           pd),
+                               rows = robust == "robust")) %>%
+  gt::cols_hide(columns = robust)
+T4_emmeans
+
+# Saving the table
+T4_emmeans %>%
+    gt::gtsave(filename = "Tables/Table 4_emmeans.html")
+```
+

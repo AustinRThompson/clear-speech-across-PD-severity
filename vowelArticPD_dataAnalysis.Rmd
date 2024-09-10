@@ -16,6 +16,7 @@ library(broom.mixed)  # install.packages("broom.mixed")
 library(brms)         # install.packages("brms")
 library(ggthemes)
 library(patchwork)
+library(weights)
 theme_set(theme_minimal())
 
 # Creating a theme function used for visualizations
@@ -125,7 +126,7 @@ First, we need to figure out the model parameters
 
 modelFormula_Int <-
   Int ~ Severity * condition +
-  (1 | StudyID / Sent / rep) + # Each Speaker (StudyID) read three sentences (Sent), five times each (rep)
+  (1 | StudyID) + # Each Speaker (StudyID) read three sentences (Sent) five times each (rep).
   (1 | ListenerID)
 
 brms::get_prior(
@@ -158,6 +159,14 @@ model_Int <- brms::brm(
   file = "Models/brms_Int.rds",
   file_refit = "on_change"
 )
+
+# Calculating the residual variance
+if (file.exists("Models/variance_Int.rds") == T) {
+  variance_Int <- base::readRDS(file = "Models/variance_Int.rds")
+} else {
+  variance_Int <- insight::get_variance(model_Int)
+  base::saveRDS(variance_Int, file = "Models/variance_Int.rds")
+}
 ```
 
 ### Model Summary
@@ -192,6 +201,52 @@ modelSummary_Int <- tidy(model_Int) %>%
 
 rm(pd_Int)
 ```
+
+### Pairwise Comparisons
+```{r}
+
+# Probability of direction (pd)
+pd_emmeans_Int <- bayestestR::p_direction(
+  model_Int %>%
+    emmeans::emmeans(
+      ~ condition | Severity,
+      epred = TRUE,
+      re_formula = NA,
+    ) %>%
+    emmeans::contrast(method = "revpairwise")
+) |>
+  as.data.frame() %>%
+  dplyr::mutate(Severity = gsub(pattern = "moreClear - conv ", replacement = "", Parameter)) %>%
+  as.data.frame() |>
+  dplyr::select(!Parameter)
+
+
+emmeans_Int <- model_Int %>%
+  emmeans::emmeans(~ condition | Severity,
+                   epred = TRUE,
+                   re_formula = NA,) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  tidy() |>
+  dplyr::rename(l_95_HPD = lower.HPD,
+                u_95_HPD = upper.HPD) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(., pd_emmeans_Int) |>
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_HPD <= 0 & u_95_HPD > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    ),
+    writeUp = paste0("β=",rd(estimate, digits = 2),", 95% HPD Interval = [",
+                     rd(l_95_HPD, digits = 2), ", ",
+                     rd(u_95_HPD, digits = 2), "]")
+  )
+
+rm(pd_emmeans_Int)
+```
+
+
 ### Model Diagnostics
 ```{r}
 # Assess chain mixing
@@ -217,80 +272,6 @@ plot_intervalEst_Int <- mcmc_areas(
   prob = 0.95
 ) 
 
-```
-
-### Visualizations
-```{r}
-
-# Generate expected predictions from the posterio
-data_posterior_Int <- model_Int %>%
-  tidybayes::epred_draws(
-    newdata = tidyr::expand_grid(
-      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
-      condition = c("conv", "moreClear")
-    ),
-    re_formula = NA
-  ) %>%
-  dplyr::mutate(Severity = factor(
-    Severity,
-    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
-  ),
-  condition = factor(condition,
-                     levels = c("conv","moreClear"),
-                     labels = c("conversational", "clear")))
-
-plot_grandMean_Int <- ggplot(data_posterior_Int, 
-                                   aes(x = .epred, y = Severity, 
-                                       fill = condition)) +
-  stat_halfeye() +
-  ggokabeito::scale_fill_okabe_ito() +
-  labs(x = "Predicted intelligibility rating", y = NULL,
-       fill = "Condition",
-       subtitle = "Posterior predictions") +
-  scale_y_discrete(limits = rev) +
-  coord_cartesian(xlim = c(0,1)) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-epsilon <- 1e-5
-data_me_Int <- model_Int %>%
-  emmeans::emmeans( ~ condition | Severity,
-                    #at = list(Severity = "Profound"),
-                    epred = TRUE,
-                    re_formula = NA,
-                    ) %>%
-  emmeans::contrast(method = "revpairwise") %>%
-  gather_emmeans_draws() %>%
-  dplyr::mutate(
-    .value = (.value - epsilon) / (1 - 2 * epsilon),
-    # Step 1 & 2: Reverse the offset and scaling
-    .value = .value * nrow(.) / ((nrow(.) - 1) + .5)
-  )
-
-
-plot_ame_Int <- ggplot(data_me_Int, aes(x = .value, y = Severity)) +
-  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
-  labs(x = "Average marginal effect of condition",
-       y = NULL,
-       subtitle = "Condition effect (clear - conversational)") +
-  scale_y_discrete(limits = rev) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-# Combined plot
-plot_Int <- (plot_grandMean_Int | plot_ame_Int) +
-  plot_annotation(title = "Intelligibility",
-                  subtitle = "Intelligibility ratings across group/severity and speaking conditions.",
-                  theme = theme_clean())
-ggsave(
-  plot = plot_Int,
-  filename = "Plots/plot_Int.png",
-  height = 6,
-  width = 8,
-  unit = "in",
-  scale = 1,
-  bg = "white"
-)
 ```
 
 ## Articulatory Precision
@@ -356,7 +337,7 @@ First, we need to figure out the model parameters
 ```{r}
 modelFormula_AP <- 
   AP ~ Severity*condition + 
-    (1 | StudyID/Sent/rep) + # Each Speaker (StudyID) read three sentences (Sent), five times each (rep)
+    (1 | StudyID) +
     (1 | ListenerID)
 
 brms::get_prior(
@@ -391,6 +372,15 @@ model_AP <- brms::brm(
   file = "Models/brms_AP.rds",
   file_refit = "on_change"
 )
+
+
+# Calculating the residual variance
+if (file.exists("Models/variance_AP.rds") == T) {
+  variance_AP <- base::readRDS(file = "Models/variance_AP.rds")
+} else {
+  variance_AP <- insight::get_variance(model_AP)
+  base::saveRDS(variance_AP, file = "Models/variance_AP.rds")
+}
 ```
 
 ### Model Summary
@@ -422,6 +412,50 @@ modelSummary_AP <- tidy(model_AP) %>%
 
 rm(pd_AP)
 ```
+
+### Pairwise Comparisons
+```{r}
+
+# Probability of direction (pd)
+pd_emmeans_AP <- bayestestR::p_direction(
+  model_AP %>%
+    emmeans::emmeans(
+      ~ condition | Severity,
+      epred = TRUE,
+      re_formula = NA,
+    ) %>%
+    emmeans::contrast(method = "revpairwise")
+) |>
+  as.data.frame() %>%
+  dplyr::mutate(Severity = gsub(pattern = "moreClear - conv ", replacement = "", Parameter)) %>%
+  as.data.frame() |>
+  dplyr::select(!Parameter)
+
+
+emmeans_AP <- model_AP %>%
+  emmeans::emmeans(~ condition | Severity,
+                   epred = TRUE,
+                   re_formula = NA,) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  tidy() |>
+  dplyr::rename(l_95_HPD = lower.HPD,
+                u_95_HPD = upper.HPD) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(., pd_emmeans_AP) |>
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_HPD <= 0 & u_95_HPD > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    ),
+    writeUp = paste0("β=",rd(estimate, digits = 2),", 95% HPD Interval = [",
+                     rd(l_95_HPD, digits = 2), ", ",
+                     rd(u_95_HPD, digits = 2), "]")
+  )
+
+rm(pd_emmeans_AP)
+```
 ### Model Diagnostics
 ```{r}
 # Assess chain mixing
@@ -447,80 +481,6 @@ plot_intervalEst_AP <- mcmc_areas(
   prob = 0.95
 ) 
 
-```
-
-### Visualizations
-```{r}
-
-# Generate expected predictions from the posterio
-data_posterior_AP <- model_AP %>%
-  tidybayes::epred_draws(
-    newdata = tidyr::expand_grid(
-      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
-      condition = c("conv", "moreClear")
-    ),
-    re_formula = NA
-  ) %>%
-  dplyr::mutate(Severity = factor(
-    Severity,
-    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
-  ),
-  condition = factor(condition,
-                     levels = c("conv","moreClear"),
-                     labels = c("conversational", "clear")))
-
-plot_grandMean_AP <- ggplot(data_posterior_AP, 
-                                   aes(x = .epred, y = Severity, 
-                                       fill = condition)) +
-  stat_halfeye() +
-  ggokabeito::scale_fill_okabe_ito() +
-  labs(x = "Predicted articulatory precision rating", y = NULL,
-       fill = "Condition",
-       subtitle = "Posterior predictions") +
-  scale_y_discrete(limits = rev) +
-  coord_cartesian(xlim = c(0,1)) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-epsilon <- 1e-5
-data_me_AP <- model_AP %>%
-  emmeans::emmeans( ~ condition | Severity,
-                    #at = list(Severity = "Profound"),
-                    epred = TRUE,
-                    re_formula = NA,
-                    ) %>%
-  emmeans::contrast(method = "revpairwise") %>%
-  gather_emmeans_draws() %>%
-  dplyr::mutate(
-    .value = (.value - epsilon) / (1 - 2 * epsilon),
-    # Step 1 & 2: Reverse the offset and scaling
-    .value = .value * nrow(.) / ((nrow(.) - 1) + .5)
-  )
-
-
-plot_ame_AP <- ggplot(data_me_AP, aes(x = .value, y = Severity)) +
-  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
-  labs(x = "Average marginal effect of condition",
-       y = NULL,
-       subtitle = "Condition effect (clear - conversational)") +
-  scale_y_discrete(limits = rev) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-# Combined plot
-plot_AP <- (plot_grandMean_AP | plot_ame_AP) +
-  plot_annotation(title = "Articulatory Precision",
-                  subtitle = "Predicted articulatory precision ratings across group/severity and speaking conditions.",
-                  theme = theme_clean())
-ggsave(
-  plot = plot_AP,
-  filename = "Plots/plot_AP.png",
-  height = 6,
-  width = 8,
-  unit = "in",
-  scale = 1,
-  bg = "white"
-)
 ```
 
 ## aVSA
@@ -597,6 +557,14 @@ model_aVSA <- brms::brm(
   file = "Models/brms_aVSA.rds",
   file_refit = "on_change"
 )
+
+# Calculating the residual variance
+if (file.exists("Models/variance_aVSA.rds") == T) {
+  variance_aVSA <- base::readRDS(file = "Models/variance_aVSA.rds")
+} else {
+  variance_aVSA <- insight::get_variance(model_aVSA)
+  base::saveRDS(variance_aVSA, file = "Models/variance_aVSA.rds")
+}
 ```
 
 ### Model Summary
@@ -628,6 +596,51 @@ modelSummary_aVSA <- tidy(model_aVSA) %>%
 
 rm(pd_aVSA)
 ```
+
+### Pairwise Comparisons
+```{r}
+
+# Probability of direction (pd)
+pd_emmeans_aVSA <- bayestestR::p_direction(
+  model_aVSA %>%
+    emmeans::emmeans(
+      ~ condition | Severity,
+      epred = TRUE,
+      re_formula = NA,
+    ) %>%
+    emmeans::contrast(method = "revpairwise")
+) |>
+  as.data.frame() %>%
+  dplyr::mutate(Severity = gsub(pattern = "moreClear - conv ", replacement = "", Parameter)) %>%
+  as.data.frame() |>
+  dplyr::select(!Parameter)
+
+
+emmeans_aVSA <- model_aVSA %>%
+  emmeans::emmeans(~ condition | Severity,
+                   epred = TRUE,
+                   re_formula = NA,) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  tidy() |>
+  dplyr::rename(l_95_HPD = lower.HPD,
+                u_95_HPD = upper.HPD) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(., pd_emmeans_aVSA) |>
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_HPD <= 0 & u_95_HPD > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    ),
+    writeUp = paste0("β=",rd(estimate, digits = 2),", 95% HPD Interval = [",
+                     rd(l_95_HPD, digits = 2), ", ",
+                     rd(u_95_HPD, digits = 2), "]")
+  )
+
+rm(pd_emmeans_aVSA)
+```
+
 ### Model Diagnostics
 ```{r}
 # Assess chain mixing
@@ -655,73 +668,6 @@ plot_intervalEst_aVSA <- mcmc_areas(
 
 ```
 
-### Visualizations
-```{r}
-
-# Generate expected predictions from the posterior
-data_posterior_aVSA <- model_aVSA %>%
-  tidybayes::epred_draws(
-    newdata = tidyr::expand_grid(
-      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
-      condition = c("conv", "moreClear")
-    ),
-    re_formula = NA
-  ) %>%
-  dplyr::mutate(Severity = factor(
-    Severity,
-    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
-  ),
-  condition = factor(condition,
-                     levels = c("conv","moreClear"),
-                     labels = c("conversational", "clear")))
-
-plot_grandMean_aVSA <- ggplot(data_posterior_aVSA, 
-                                   aes(x = .epred, y = Severity, 
-                                       fill = condition)) +
-  stat_halfeye() +
-  ggokabeito::scale_fill_okabe_ito() +
-  labs(x = "Predicted VSA (in Bark)", y = NULL,
-       fill = "Condition",
-       subtitle = "Posterior predictions") +
-  scale_y_discrete(limits = rev) +
-  coord_cartesian(xlim = c(0,20)) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-data_me_aVSA <- model_aVSA %>%
-  emmeans::emmeans( ~ condition | Severity,
-                    #at = list(Severity = "Profound"),
-                    epred = TRUE,
-                    re_formula = NA,
-                    ) %>%
-  emmeans::contrast(method = "revpairwise") %>%
-  gather_emmeans_draws()
-
-
-plot_ame_aVSA <- ggplot(data_me_aVSA, aes(x = .value, y = Severity)) +
-  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
-  labs(x = "Average marginal effect of condition",
-       y = NULL,
-       subtitle = "Condition effect (clear - conversational)") +
-  scale_y_discrete(limits = rev) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-# Combined plot
-plot_aVSA <- (plot_grandMean_aVSA | plot_ame_aVSA) +
-  plot_annotation(title = "Acoustic Vowel Space Area (VSA)",
-                  subtitle = "Predicted VSA (in Bark) across group/severity and speaking conditions.",
-                  theme = theme_clean())
-ggsave(
-  plot = plot_aVSA,
-  filename = "Plots/plot_aVSA.png",
-  height = 6,
-  width = 8,
-  unit = "in",
-  scale = 1,
-  bg = "white"
-)
-```
 
 ## Kinematic Distance
 Kinematic distance was measured from the tongue back sensor (adhered 5 mm from the tongue tip) during the diphthong /ai/ in "buy". The 2D positions of the onset and offset were used to calculate the Euclidean distance. This measure ranges from 0.03 to 28 mm. So, it is bound by 0, and does not have any negative values. For this reason, we use the lognormal family.
@@ -801,6 +747,205 @@ model_kinDistance <- brms::brm(
   file = "Models/brms_kinDistance.rds",
   file_refit = "on_change"
 )
+
+# Calculating the residual variance
+if (file.exists("Models/variance_kinDistance.rds") == T) {
+  variance_kinDistance <- base::readRDS(file = "Models/variance_kinDistance.rds")
+} else {
+  variance_kinDistance <- insight::get_variance(model_kinDistance)
+  base::saveRDS(variance_kinDistance, file = "Models/variance_kinDistance.rds")
+}
+```
+
+
+### Model Summary
+```{r}
+# Probability of direction (pd)
+pd_kinDistance <- bayestestR::p_direction(model_kinDistance) %>%
+  dplyr::rename(term = Parameter,
+                effect = Effects,
+                component = Component) %>%
+  dplyr::mutate(
+    component = ifelse(component == "conditional", "cond", component),
+    term = gsub(pattern = "b_", replacement = "", term),
+    term = ifelse(term == "Intercept", "(Intercept)", term))
+
+# Model results
+modelSummary_kinDistance <- tidy(model_kinDistance) %>%
+  dplyr::rename(l_95_CI = conf.low,
+                u_95_CI = conf.high) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(.,pd_kinDistance, all = T) %>%
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_CI <= 0 & u_95_CI > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    )
+  )
+
+rm(pd_kinDistance)
+```
+
+### Pairwise Comparisons
+```{r}
+
+# Probability of direction (pd)
+pd_emmeans_kinDistance <- bayestestR::p_direction(
+  model_kinDistance %>%
+    emmeans::emmeans(
+      ~ condition | Severity,
+      epred = TRUE,
+      re_formula = NA,
+    ) %>%
+    emmeans::contrast(method = "revpairwise")
+) |>
+  as.data.frame() %>%
+  dplyr::mutate(Severity = gsub(pattern = "moreClear - conv ", replacement = "", Parameter)) %>%
+  as.data.frame() |>
+  dplyr::select(!Parameter)
+
+
+emmeans_kinDistance <- model_kinDistance %>%
+  emmeans::emmeans(~ condition | Severity,
+                   epred = TRUE,
+                   re_formula = NA,) %>%
+  emmeans::contrast(method = "revpairwise") %>%
+  tidy() |>
+  dplyr::rename(l_95_HPD = lower.HPD,
+                u_95_HPD = upper.HPD) %>%
+  dplyr::mutate(order = row_number()) %>%
+  base::merge(., pd_emmeans_kinDistance) |>
+  dplyr::arrange(order) %>%
+  dplyr::select(!order) %>%
+  dplyr::mutate(
+    robust = case_when(
+      as.integer(!(l_95_HPD <= 0 & u_95_HPD > 0)) == 1 & pd > .95 ~ "robust",
+      TRUE ~ "not robust"
+    ),
+    writeUp = paste0("β=",rd(estimate, digits = 2),", 95% HPD Interval = [",
+                     rd(l_95_HPD, digits = 2), ", ",
+                     rd(u_95_HPD, digits = 2), "]")
+  )
+
+rm(pd_emmeans_kinDistance)
+```
+
+### Model Diagnostics
+```{r}
+# Assess chain mixing
+plot_chainMix_kinDistance <- base::plot(model_kinDistance, ask=FALSE)
+
+# Posterior predictive check
+plot_ppCheck_kinDistance <- brms::pp_check(model_kinDistance, ndraws = 1000)
+
+# Plot conditional effects
+plot_conditionalEffects_kinDistance <- base::plot(conditional_effects(model_kinDistance), ask = FALSE)
+
+# kinDistanceerval Estimations
+data_posterior_kinDistance <- as.matrix(model_kinDistance) %>%
+  as.data.frame()
+
+plot_intervalEst_kinDistance <- mcmc_areas(
+  data_posterior_kinDistance,
+  pars = fixed_effects <- data_posterior_kinDistance %>%
+    as.data.frame() %>%
+    dplyr::select(starts_with("b_")) %>%
+    colnames(),
+  # arbitrary threshold for shading probability mass
+  prob = 0.95
+) 
+
+```
+
+## Kinematic Distance + Duration
+Kinematic distance was measured from the tongue back sensor (adhered 5 mm from the tongue tip) during the diphthong /ai/ in "buy". The 2D positions of the onset and offset were used to calculate the Euclidean distance. This measure ranges from 0.03 to 28 mm. So, it is bound by 0, and does not have any negative values. For this reason, we use the lognormal family.
+### Loading the data
+```{r}
+aiMeasures <-
+  rio::import(file = "https://raw.githubusercontent.com/AustinRThompson/multidomain-vowelArtic-PD/main/Data/PreppedData/CollatedData/TargetMeasures_aiMeasures.csv") %>%
+  dplyr::filter(condition != "lessClear") %>% # We won't use the less clear condition in this study
+  
+# Here we rename some variables and clean up the factors
+  dplyr::mutate(Sex = factor(Sex, levels = c("M", "F")),
+                condition = factor(condition, levels = c("conv", "moreClear"))) %>%
+  
+  # Now we merge the data with the speakerList, which has information about severity level.
+  base::merge(., speakerList %>%
+                dplyr::select(StudyID, Severity)) %>%
+  dplyr::mutate(
+    Severity = factor(
+      Severity,
+      levels = c("HC", "Mild", "Moderate", "Severe", "Profound"),
+      labels = c("Control", "Mild", "Moderate", "Severe", "Profound")
+    )
+  ) %>%
+  dplyr::group_by(StudyID, Group, Sex, Severity, condition) %>%
+  dplyr::summarise(kinDistance = mean(kinDistance, na.rm = T),
+                   duration = mean(duration, na.rm = T)) %>%
+  dplyr::ungroup()
+
+# Lets visualize the outcome measure, kinDistance
+hist(aiMeasures$kinDistance)
+hist(log(aiMeasures$kinDistance + 1))
+
+data_modelData_kinDistance <- aiMeasures %>%
+  dplyr::mutate(kinDistance = kinDistance + 1) # applying a constant before the log transformation in the model
+
+performance::check_distribution(data_modelData_kinDistance$kinDistance)
+hist(log(data_modelData_kinDistance$kinDistance))
+
+# Taking out the trash
+rm(aiMeasures)
+```
+
+### Priors
+First, we need to figure out the model parameters
+```{r}
+
+modelFormula_kinDistance <-
+  kinDistance ~ Severity * condition + duration +
+  (1 | StudyID) # Each Speaker (StudyID) has 2 kinDistance measures for each condition
+
+brms::get_prior(formula = modelFormula_kinDistance,
+                data = data_modelData_kinDistance,
+                family = lognormal)
+```
+
+Now we can specify weakly informative priors.
+```{r}
+priors_kinDistance <- c(
+  prior(normal(0, 10), class = Intercept),
+  prior(normal(0, 10), class = b),
+  prior(cauchy(0, 10), class = sigma),
+  prior(cauchy(0, 10), class = sd)
+)
+```
+
+### Building the model
+```{r}
+model_kinDistance <- brms::brm(
+  formula = modelFormula_kinDistance,
+  data = data_modelData_kinDistance,
+  family = lognormal,
+  prior = priors_kinDistance,
+  chains = 4,
+  cores = 4,
+  iter = 4000,
+  warmup = 1000,
+  control = list(adapt_delta = 0.95),
+  file = "Models/brms_kinDistance_duration.rds",
+  file_refit = "on_change"
+)
+
+# Calculating the residual variance
+if (file.exists("Models/variance_kinDistance_duration.rds") == T) {
+  variance_kinDistance <- base::readRDS(file = "Models/variance_kinDistance_duration.rds")
+} else {
+  variance_kinDistance <- insight::get_variance(model_kinDistance)
+  base::saveRDS(variance_kinDistance, file = "Models/variance_kinDistance_duration.rds")
+}
 ```
 
 
@@ -860,78 +1005,237 @@ plot_intervalEst_kinDistance <- mcmc_areas(
 
 ```
 
-
-### Visualizations
-```{r}
-
-# Generate expected predictions from the posterior
-data_posterior_kinDistance <- model_kinDistance %>%
-  tidybayes::epred_draws(
-    newdata = tidyr::expand_grid(
-      Severity = c("Control", "Mild", "Moderate", "Severe", "Profound"),
-      condition = c("conv", "moreClear")
-    ),
-    re_formula = NA
-  ) %>%
-  dplyr::mutate(Severity = factor(
-    Severity,
-    levels = c("Control", "Mild", "Moderate", "Severe", "Profound")
-  ),
-  condition = factor(condition,
-                     levels = c("conv","moreClear"),
-                     labels = c("conversational", "clear")))
-
-plot_grandMean_kinDistance <- ggplot(data_posterior_kinDistance, 
-                                   aes(x = .epred, y = Severity, 
-                                       fill = condition)) +
-  stat_halfeye() +
-  ggokabeito::scale_fill_okabe_ito() +
-  labs(x = "Predicted kinematic distance (mm)", y = NULL,
-       fill = "Condition",
-       subtitle = "Posterior predictions") +
-  scale_y_discrete(limits = rev) +
-  coord_cartesian(xlim = c(0,43)) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-data_me_kinDistance <- model_kinDistance %>%
-  emmeans::emmeans( ~ condition | Severity,
-                    epred = TRUE,
-                    re_formula = NA,
-                    ) %>%
-  emmeans::contrast(method = "revpairwise") %>%
-  gather_emmeans_draws()
-
-
-plot_ame_kinDistance <- ggplot(data_me_kinDistance, aes(x = .value, y = Severity)) +
-  stat_halfeye(fill = ggokabeito::palette_okabe_ito(order = 7)) +
-  labs(x = "Average marginal effect of condition",
-       y = NULL,
-       subtitle = "Condition effect (clear - conversational)") +
-  scale_y_discrete(limits = rev) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-# Combined plot
-plot_kinDistance <- (plot_grandMean_kinDistance | plot_ame_kinDistance) +
-  plot_annotation(title = "Kinematic Distance",
-                  subtitle = "Predicted kinematic distance (mm) for /aɪ/ across group/severity and speaking conditions.",
-                  theme = theme_clean())
-ggsave(
-  plot = plot_kinDistance,
-  filename = "Plots/plot_kinDistance.png",
-  height = 6,
-  width = 8,
-  unit = "in",
-  scale = 1,
-  bg = "white"
-)
-```
-
-
 # Model Tables
 ```{r}
-sjPlot::tab_model(model_aVSA,
-                  file = "Tables/modelInt.html")
+summaryTable_fixed <- base::merge(
+  
+  modelSummary_Int %>%
+    dplyr::filter(effect == "fixed") %>%
+    dplyr::select(term,
+                  Int_estimate = estimate,
+                  Int_l_95_CI = l_95_CI,
+                  Int_u_95_CI = u_95_CI,
+                  Int_pd = pd,
+                  Int_robust = robust) %>%
+    dplyr::mutate(term = as.factor(term)),
+  
+  modelSummary_AP %>%
+    dplyr::filter(effect == "fixed") %>%
+    dplyr::select(term,
+                  AP_estimate = estimate,
+                  AP_l_95_CI = l_95_CI,
+                  AP_u_95_CI = u_95_CI,
+                  AP_pd = pd,
+                  AP_robust = robust) %>%
+    dplyr::mutate(term = as.factor(term))) %>%
+  
+  base::merge(
+    .,
+    modelSummary_aVSA %>%
+      dplyr::filter(effect == "fixed") %>%
+      dplyr::select(
+        term,
+        aVSA_estimate = estimate,
+        aVSA_l_95_CI = l_95_CI,
+        aVSA_u_95_CI = u_95_CI,
+        aVSA_pd = pd,
+                  aVSA_robust = robust
+      ) %>%
+      dplyr::mutate(term = as.factor(term))
+  ) %>%
+  
+  base::merge(
+    .,
+    modelSummary_kinDistance %>%
+      dplyr::filter(effect == "fixed") %>%
+      dplyr::select(
+        term,
+        kinDistance_estimate = estimate,
+        kinDistance_l_95_CI = l_95_CI,
+        kinDistance_u_95_CI = u_95_CI,
+        kinDistance_pd = pd,
+                  kinDistance_robust = robust
+      ) %>%
+      dplyr::mutate(term = as.factor(term))
+  ) %>%
+  
+  # Making the terms prettier
+  dplyr::mutate(
+    Int_CI_95 = paste0(
+      round(Int_l_95_CI, digits = 2), " – ",
+      round(Int_u_95_CI, digits = 2)
+    ),
+    AP_CI_95 = paste0(
+      round(AP_l_95_CI, digits = 2), " – ",
+      round(AP_u_95_CI, digits = 2)),
+    aVSA_CI_95 = paste0(
+      round(aVSA_l_95_CI, digits = 2), " – ",
+      round(aVSA_u_95_CI, digits = 2)
+    ),
+    kinDistance_CI_95 = paste0(
+      round(kinDistance_l_95_CI, digits = 2), " – ",
+      round(kinDistance_u_95_CI, digits = 2)
+    ),
+    
+    terms = factor(
+      term,
+      levels = c(
+        "(Intercept)",
+        "SeverityMild",
+        "SeverityModerate",
+        "SeveritySevere",
+        "SeverityProfound",
+        "conditionmoreClear",
+        "SeverityMild:conditionmoreClear",
+        "SeverityModerate:conditionmoreClear",
+        "SeveritySevere:conditionmoreClear",
+        "SeverityProfound:conditionmoreClear"
+      ),
+      labels = c(
+        "Intercept (Control × Conversational)",
+        "Mild × Conversational",
+        "Moderate × Conversational",
+        "Severe × Conversational",
+        "Profound × Conversational",
+        "Control × Clear",
+        "Mild × Clear",
+        "Moderate × Clear",
+        "Severe × Clear",
+        "Profound × Clear"
+      ),
+    )) %>% 
+  dplyr::relocate(terms, .after = term) %>%
+  arrange(terms)
+
+
+summaryTable_fixed %>%
+  dplyr::select(!c(term,
+                Int_l_95_CI, Int_u_95_CI,
+                AP_l_95_CI, AP_u_95_CI,
+                aVSA_l_95_CI, aVSA_u_95_CI,
+                kinDistance_l_95_CI, kinDistance_u_95_CI)) %>%
+  gt::gt() |>
+  gt::tab_spanner(
+    columns = c(Int_estimate,
+               Int_CI_95,
+               Int_pd),
+    label = "Intelligibility"
+  ) |>
+  gt::tab_spanner(
+    columns = c(AP_estimate,
+               AP_CI_95,
+               AP_pd),
+    label = "Articulatory Precision"
+  ) |>
+  gt::tab_spanner(
+    columns = c(aVSA_estimate,
+               aVSA_CI_95,
+               aVSA_pd),
+    label = "Vowel Space Area"
+  ) |>
+  gt::tab_spanner(
+    columns = c(kinDistance_estimate,
+               kinDistance_CI_95,
+               kinDistance_pd),
+    label = "Kinematic Distance"
+  ) |>
+  gt::fmt_number(columns = Int_estimate:kinDistance_pd,
+                 decimals = 2) |>
+  gt::fmt_percent(columns = c(Int_pd,
+                             AP_pd,
+                             aVSA_pd,
+                             kinDistance_pd), ) |>
+  gt::cols_label(
+    terms = "Predictors",
+    Int_estimate = "Estimates",
+    AP_estimate = "Estimates",
+    aVSA_estimate = "Estimates",
+    kinDistance_estimate = "Estimates",
+    Int_CI_95 = "CI (95%)",
+    AP_CI_95 = "CI (95%)",
+    aVSA_CI_95 = "CI (95%)",
+    kinDistance_CI_95 = "CI (95%)",
+    Int_pd = "pd",
+    AP_pd = "pd",
+    aVSA_pd = "pd",
+    kinDistance_pd = "pd",
+  ) %>%
+  gt::cols_align(align = "left",
+                 columns = terms) |>
+  # Bolding for robust effects
+  ## Intelligibility
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(Int_estimate,
+                                           Int_CI_95,
+                                           Int_pd),
+                               rows = Int_robust == "robust")
+  ) |> 
+  ## Articulatory precision
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(AP_estimate,
+                                           AP_CI_95,
+                                           AP_pd),
+                               rows = AP_robust == "robust")
+  ) |> 
+  ## aVSA
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(aVSA_estimate,
+                                           aVSA_CI_95,
+                                           aVSA_pd),
+                               rows = aVSA_robust == "robust")
+  ) |> 
+  ## Kinematic Distance
+  gt::tab_style(
+    style = list(gt::cell_text(weight = "bold")),
+    locations = gt::cells_body(columns = c(kinDistance_estimate,
+                                           kinDistance_CI_95,
+                                           kinDistance_pd),
+                               rows = kinDistance_robust == "robust")
+  ) |> 
+  gt::cols_hide(
+    columns = c(Int_robust,
+                AP_robust,
+                aVSA_robust,
+                kinDistance_robust)
+  ) |>
+  
+  gt::gtsave(filename = "Tables/brmsModel_FixedEffects.html")
+
+summaryTable_random <- data.frame(
+  randomEffect = c("σ^2",
+                   "N_StudyID",
+                   "N_ListenerID",
+                   "Observations"),
+  Int = c(
+    format(round(variance_Int$var.residual, 3), nsmall = 3),
+    summary(model_Int)[["ngrps"]][["StudyID"]],
+    summary(model_Int)[["ngrps"]][["ListenerID"]],
+    summary(model_Int)[["nobs"]]
+  ),
+  AP = c(
+    format(round(variance_AP$var.residual, 3), nsmall = 3),
+    summary(model_AP)[["ngrps"]][["StudyID"]],
+    summary(model_AP)[["ngrps"]][["ListenerID"]],
+    summary(model_AP)[["nobs"]]
+  ),
+  aVSA = c(
+    format(round(variance_aVSA$var.residual, 3), nsmall = 3),
+    summary(model_aVSA)[["ngrps"]][["StudyID"]],
+    "",
+    summary(model_aVSA)[["nobs"]]
+  ),
+  kinDistance = c(
+    format(round(variance_kinDistance$var.residual, 3), nsmall = 3),
+    summary(model_kinDistance)[["ngrps"]][["StudyID"]],
+    "",
+    summary(model_kinDistance)[["nobs"]]
+  )
+) |>
+  gt::gt() |>
+  gt::gtsave(filename = "Tables/brmsModel_RandomEffects.html")
+
 ```
 
