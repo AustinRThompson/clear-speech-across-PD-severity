@@ -128,7 +128,7 @@ plot_ameGroup_Int <- ggplot(data_meGroup_Int, aes(x = .value, y = contrast)) +
     x = "Average marginal effect of group",
     y = NULL,
     title = "Research Question 1",
-    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    subtitle = "Group effect (PwPD - Pw/oPD)\nat conversational."
     ) +
   scale_y_discrete(limits = rev, drop = FALSE) +
   annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
@@ -156,7 +156,7 @@ data_meGroupCondition_Int <- model_Int %>%
     .value = .value * nrow(.) / ((nrow(.) - 1) + .5)
   )
 
-hypothesis(data_meGroupCondition_Int)
+#hypothesis(data_meGroupCondition_Int)
 bayestestR::p_direction(data_meGroupCondition_Int)
 
 plot_ameGroupCondition_Int <- ggplot(data_meGroupCondition_Int, aes(x = .value, y = Severity)) +
@@ -273,7 +273,7 @@ plot_ameGroup_AP <- ggplot(data_meGroup_AP, aes(x = .value, y = contrast)) +
     x = "Average marginal effect of group",
     y = NULL,
     title = "Research Question 1",
-    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    subtitle = "Group effect (PwPD - Pw/oPD)\nat conversational."
     ) +
   scale_y_discrete(limits = rev, drop = FALSE) +
   annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
@@ -414,7 +414,7 @@ plot_ameGroup_aVSA <- ggplot(data_meGroup_aVSA, aes(x = .value, y = contrast)) +
     x = "Average marginal effect of group",
     y = NULL,
     title = "Research Question 1",
-    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    subtitle = "Group effect (PwPD - Pw/oPD)\nat conversational."
     ) +
   scale_y_discrete(limits = rev, drop = F) +
   annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
@@ -466,7 +466,7 @@ plot_ameGroupCondition_aVSA <- ggplot(data_meGroupCondition_aVSA, aes(x = .value
 plot_aVSA <- plot_grandMean_aVSA + plot_ameGroup_aVSA + plot_ameGroupCondition_aVSA +
   patchwork::plot_layout(ncol = 3, 
               heights = c(1)) +
-  plot_annotation(title = "Acoustic Vowel Space Area (VSA)",
+  plot_annotation(title = "Acoustic Vowel Space Area (aVSA)",
                   #subtitle = "Predicted VSA (in Bark) across group/severity and speaking conditions.",
                   theme = theme_clean())
 ggsave(
@@ -550,7 +550,7 @@ plot_ameGroup_kinDistance <- ggplot(data_meGroup_kinDistance, aes(x = .value, y 
     x = "Average marginal effect of group",
     y = NULL,
     title = "Research Question 1",
-    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    subtitle = "Group effect (PwPD - Pw/oPD)\nat conversational."
     ) +
   scale_y_discrete(limits = rev, drop = F) +
   annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
@@ -690,7 +690,7 @@ plot_ameGroup_kinDistance <- ggplot(data_meGroup_kinDistance, aes(x = .value, y 
     x = "Average marginal effect of group",
     y = NULL,
     title = "Research Question 1",
-    subtitle = "Group effect (Parkinson - Control)\nat conversational."
+    subtitle = "Group effect (PwPD - Pw/oPD)\nat conversational."
     ) +
   scale_y_discrete(limits = rev, drop = F) +
   annotate("text",x = 0, y = 6, label = "", size = 5)  + # this adds an empty annotation at the "control" line
