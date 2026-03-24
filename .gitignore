@@ -57,3 +57,4 @@ rsconnect/
 /*.rds
 
 /old
+/data
