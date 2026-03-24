@@ -1,0 +1,447 @@
+---
+title: "Severity-Dependent Speech Characteristics and Clear Speech Response in Parkinson's Disease: Perceptual, Acoustic, and Lingual Kinematic Findings"
+author: "Austin Thompson^1^, Lifeng Lin^2^, and Yunjung Kim^3^"
+abstract: |
+  1.	Department of Communication Sciences and Disorders, University of Houston
+  2.	Department of Epidemiology and Biostatistics, University of Arizona
+  3.	School of Communication Science and Disorders, Florida State University
+abstract-title: Affiliations
+format:
+  docx:
+    # this holds the style template for the word document
+    reference-doc: "../../templates-data/custom-reference.docx"
+    # this holds the style template for the word document
+    pandoc-args: ["-Fpandoc-crossref"]
+  #html:
+   # toc: true
+    #toc_float: true
+    #html-math-method: katex
+    #css: styles.css
+    #embed-resources: true
+    #self-contained-math: true
+    #fig-cap-location: top
+params:
+  spec: "initial"   # or "rev1"
+editor: visual
+bibliography: references.bib
+csl: "../../apa.csl"
+crossref:
+  custom:
+    - kind: float
+      key: supptbl
+      latex-env: supptbl
+      reference-prefix: Table S
+      space-before-numbering: false
+      latex-list-of-description: Supplementary Table
+---
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+# setup chunk
+library(here)
+library(htmltools)
+purrr::walk(list.files("R", full.names = TRUE, pattern = "\\.R$"), source)
+
+library(targets)
+
+spec <- params$spec  # "initial" or "rev1"
+registry  <- yaml::read_yaml(here("specs.yml"))
+
+```
+
+{{< pagebreak >}}
+
+# Abstract
+
+**Purpose:** This study examined perceptual, acoustic, and lingual kinematic characteristics in healthy speakers and across dysarthria severity levels in people with Parkinson’s disease, and the impact of clear speech on these measures.
+
+**Method:** Forty speakers, including 22 PwPD and 18 neurologically healthy comparison speakers, participated in this study. PwPD were classified into severity groups based on listener-derived intelligibility ratings. Acoustic corner vowel distance, as well as tongue front and tongue back distance, were measured from phrase-level speech samples. Additionally, 50 naïve listeners provided ratings of intelligibility and articulatory precision via crowdsourcing. The study examined group differences (control vs. dysarthria severity levels) and clear speech gains within each group using multilevel Bayesian modeling.
+
+**Results:** The perceptual and acoustic measures generally declined with increasing severity, with more pronounced differences emerging at higher severity levels. Lingual kinematics revealed a nonlinear pattern, with movement initially exceeding controls before declining at higher severity levels. Finally, clear speech resulted in more intelligible speech (particularly for the most severe dysarthria), more precise speech, and larger, more acoustically distinct vowels, with cue effectiveness tending to decrease as severity worsened.
+
+**Conclusion:** The present severity-specific analysis, including the non-linear lingual kinematic patterns observed, helps reconcile prior conflicting findings on lingual kinematics and support the notion of a posterior-to-anterior progression of lingual articulatory impairment. The use of clear speech is generally well supported by the findings, although the effectiveness of clear speech cues varies across severity levels and individual speakers.
+
+# Introduction
+
+In this study, we explored the perceptual, acoustic, and kinematic features of speakers with Parkinson’s disease (PD) with varying levels of dysarthria severity. Our study had two aims. Our first aim was to investigate how articulatory patterns differ as dysarthria becomes more severe, using a cross-sectional design to characterize progression. We were also interested in exploring how speakers with PD of varying severity respond to behavioral speech cues commonly used in dysarthria management. Therefore, our second aim examined how speakers at different severity levels modified their articulation in response to prompts to speak more clearly.
+
+Hypokinetic dysarthria is the motor speech disorder most commonly associated with PD. In fact, it is often referred to as the "dysarthria of PD" [@duffy2013]. Hallmark characteristics include reduced volume (hypophonia), imprecise and reduced articulation (hypokinesia), and altered speech rates secondary to articulatory deficits [@darley1969; @darley1969b; @miller2017]. These perceptual characterizations are generally well supported by acoustic findings that describe people with PD (PwPD) as having reduced sound pressure levels and reduced vowel contrastivity, as evidenced by measures like acoustic vowel space area (aVSA) being smaller in PwPD compared to neurologically healthy control (HC) speakers [@lam2016; @tjaden2013]. These patterns suggest that PwPD undershoot their articulatory targets, resulting in decreased acoustic working space, less distinct vowels, and perceptually degraded speech.
+
+Acoustic measures are often used to infer articulatory behavior. However, the relationship between acoustic and kinematic measures is weaker than typically assumed [@thompson2019; @thompson2024]. Therefore, direct investigation of articulatory movement is important for understanding articulation in PwPD. Only a limited number of studies have directly examined *lingual* movement in PwPD, and these studies report conflicting outcomes. Some report smaller tongue movement [@mefferd2015; @mefferd2019; @weismer2012; @yunusova2008], others report comparable tongue movement [@kearney2017; @kuruvilla-dugdale2020], and some even report larger tongue movement [@wong2010a; @wong2011; @wong2012a] in PwPD relative to HC speakers. One factor that may contribute to these discrepancies is dysarthria *severity*, which has rarely been systematically examined in kinematic studies.
+
+## Disease progression and dysarthria severity
+
+While landmark studies defining hypokinetic dysarthria included speakers with PD across varied disease and dysarthria severities [@darley1969; @darley1969b], kinematic studies of speech in PD are often limited to individuals with mild-to-moderate dysarthria [@mefferd2015; @weismer2012; @yunusova2008]. This is largely because individuals with advanced PD are less likely to participate in research due to mobility, cognitive, and communication challenges [@hamedani2023]. Such individuals often rely on caregivers to transport them to a research lab to participate in a study. Yet even when participants are willing and able to participate in research, researchers may inadvertently homogenize their sample's dysarthria severity by using cognitive screeners such as the MoCA to exclude participants with mild cognitive impairment. While it is understandable for researchers to want to control for cognitive involvement, excluding these participants likely excludes speakers with more severe dysarthria, as cognition and dysarthria severity both decline with disease progression [@wallace2022; @rusz2024]. Additionally, studies that do include participants with more severe PD or dysarthria typically have few such cases, resulting in insufficient group sizes to analyze by severity. Consequently, speakers with mild dysarthria are overrepresented in the literature, while those with more severe dysarthria remain underrepresented, especially in studies on articulatory movement. This limits our understanding of how speech articulation changes throughout the course of PD progression.
+
+It is generally understood that intelligibility and other perceptual outcomes degrade as dysarthria progresses. However, the specific articulatory changes driving this perceptual decline remain less clear. In one key study, @logemann1978 found that among 200 PwPD across a dysarthria severity spectrum, misarticulations showed a clear pattern: articulatory errors always involved velar stops (requiring posterior tongue movement) when any impairment was present, while alveolar stop (requiring anterior tongue movement) errors appeared only in those with the greatest number of misarticulations. This indicates a posterior-to-anterior progression of lingual impairment as dysarthria worsens. Additionally, laryngeal dysfunction was present in 45% of the sample, especially among those with articulatory involvement. This finding suggests laryngeal deficits commonly emerge before lingual and labial deficits.
+
+@ho1999 extended this work by evaluating not only subsystem involvement but also severity across voice, articulation, and fluency in 200 PwPD. Their main finding was that voice impairment predominates in mild dysarthria but persists across all severities, while fluency and articulation problems become more prominent as severity increases. Notably, articulation was found to be the predominant deficit in profound dysarthria. These findings support the notion of progressive subsystem involvement laid out in @logemann1978.
+
+Kinematic studies that explicitly examine severity-related differences are lacking, with a few notable exceptions. @mefferd2019 investigated articulatory movement in 17 PwPD and 17 HC speakers. They grouped PwPD based on the perceptual presence of articulatory impairment. Mild speakers without articulatory involvement (PHON/PROS group) showed normal independent tongue back (TB; placed midsagitally 4–5 cm from the tongue tip) movement but exaggerated jaw displacement, whereas speakers with mild-to-moderate dysarthria and articulatory impairment (ARTIC/PHON/PROS group) showed reduced independent TB movement and jaw movements comparable to controls. The authors proposed that exaggerated jaw movement in the PHON/PROS group may reflect a compensatory response to early laryngeal dysfunction. This is consistent with evidence of jaw–laryngeal acoustic coupling in PD, suggesting that oral articulation may be modified in an effort to increase vocal intensity [@dromey1995]. In contrast, once articulatory deficits emerge (i.e., ARTIC/PHON/PROS group), jaw-based compensation may become less effective or less accessible.
+
+These findings align with the subsystem progression proposed by @logemann1978. In mild dysarthria, laryngeal impairment may prompt compensatory jaw expansion while tongue movements remain relatively preserved. As articulatory involvement develops (particularly in the posterior and mid-lingual regions), compensatory strategies diminish, and reductions in tongue movement become more apparent. This interpretation is further supported by very recent work by @mefferd2026, which demonstrated that lingual movement amplitudes, particularly TB movement, are closely associated with perceptual dysarthria severity in PD, with reduced articulatory amplitudes observed primarily in speakers with perceptible articulatory involvement compared to those without.
+
+@wong2010a reported a related pattern. In their study, PwPD with mild dysarthria produced exaggerated composite TB and jaw movements but had composite TF movements similar to controls. Since the TF composite includes jaw contribution, these findings indicate that TB exaggeration is not solely explained by jaw compensation, as observed by @mefferd2019. This suggests that posterior-lingual movement instability or imprecision may also play a role, supporting early posterior-lingual involvement described by @logemann1978.
+
+Importantly, however, the goal of the aforementioned studies was not to characterize disease progression [@mefferd2019; @wong2010a]. To our knowledge, only one study of speech movement has aimed to systematically characterize PD disease progression. @thies2023 examined the movement of the lower lip, tongue tip, and tongue body of 23 control speakers, 22 individuals with isolated REM sleep behavior disorder (iRBD; i.e., individuals with a high risk of developing PD), 14 speakers with mild PD, and 9 speakers with advanced PD. They found that speakers with iRBD had larger tongue tip (TT) and body amplitudes and durations than the control speakers. This suggests the presence of a compensatory articulatory behavior even before PD diagnosis or perceptible speech deficits.
+
+Interestingly, this study found a progressive pattern of movement degradation for the TT measures. However, the TB measures did not show the same distinction among iRBD, mild PD, and advanced PD. This would seem to go against the posterior-to-anterior progression of lingual dysarthria described by @logemann1978. However, the lack of these findings may be explained by their methods. TT measures were obtained during dynamic TT movements to produce the word-initial /l/. In contrast, TB movement measures were captured from monophthongs /a/, /e/, /i/, /o/, and /u/, which are relatively stable productions and do not require the same dynamic movement that might be captured in other segments, such as diphthongs [@kim2009]. Further, this study limited its movement analyses to superior/inferior movements, which are likely sufficient to capture the articulatory movements used to produce /l/. However, there may be critical information lost in the anterior-posterior movement, particularly for vowel production. This is evidenced by findings of reduced F2 slope in PwPD, which, theoretically, reflects anterior-posterior movement [@kim2009].
+
+## Clear Speech
+
+Improving speech intelligibility is one of the primary treatment targets in dysarthria management [@duffy2013; @yorkston2010]. The most commonly investigated management strategies involve prompting patients to modify their speaking style. Common approaches include cues to speak louder [@ramig2018; @wenke2010], more clearly [@lam2012; @stipancic2022; @park2021], or more slowly [@mefferd2019]. Of these prompts, we focus our current investigation on the *clear speech* cue due to its promising evidence that it elicits louder speech in PwPD, as evidenced by increased sound pressure levels (SPL) [@skrabal2020; @tjaden2014a; @tjaden2013], as well as generating larger articulatory modifications relative to conversational speech. Importantly, these benefits to articulation appear more evident in clear speech than in loud speech – especially in diphthong production [@mefferd2017; @tjaden2013a]. Further, it is likely that these articulatory changes drive the improvements to intelligibility observed for clear speech [@stipancic2022; @tjaden2014; @thompson2024].
+
+Clear speech is elicited by prompting the speaker to speak “more clearly,” with follow-up instructions to “overenunciate” or to “speak as though you are talking to someone with a hearing impairment” [@lam2012; @stipancic2022]. In PwPD, clear speech has been evidenced to produce favorable articulatory modifications, such as reduced articulation rate [@goberman2005; @kearney2017; @tjaden2014; @tjaden2013; @tjaden2017] and greater acoustic vowel distinctiveness, as indicated by increased aVSA, acoustic vowel distance, and other measures of vowel contrast [@mefferd2019; @lam2013; @whitfield2014; @whitfield2019a]. These acoustic findings are consistent with the limited kinematic literature on clear speech in PwPD, which reported larger tongue and jaw displacements in clear speech than in conversational speech [@kearney2017; @mefferd2019].
+
+However, many acknowledge that behavioral speech cues are not effective for all PwPD. Yet it is not well understood why some PwPD benefit from external cues, while others do not. We suspect that dysarthria severity plays a probable role in the success of cue adoption. Although studies examining responses to clear-speech cues have included speakers with a range of dysarthria severity, these studies have primarily characterized overall group-level responses. In contrast, to date, no study has systematically examined the effectiveness of clear-speech cues as a function of dysarthria severity in PwPD. The closest study we have to understanding this question is from the aforementioned study by @mefferd2019.
+
+In their study, both mild speakers without articulatory involvement (PHON/PROS group) and speakers with mild-to-moderate dysarthria and articulatory impairment (ARTIC/PHON/PROS group) showed similar increased independent TB movement and jaw movements under clear speech conditions [@mefferd2019]. This suggests that speakers with PD and mild and mild-to-moderate dysarthria likely employ similar articulatory strategies to achieve clear speech, at least for TB and jaw movement. Further research is needed to understand how speakers with varying degrees of dysarthria respond to clear speech, which might help us better identify who benefits from these cues and why.
+
+## The Current Study
+
+While perceptual and acoustic studies offer some insight into severity-related changes in dysarthria, systematic severity-based examinations of articulatory patterns—particularly lingual kinematics—are still lacking. Understanding lingual deficits within PD is important, given the tongue’s role as the primary articulator of speech. The limited research within this line limits our understanding of dysarthria progression in PD. Further, efforts to evaluate the success of behavioral treatment cues often focus on the average, group-level response in PwPD, without directly examining how severity may shape cue adoption. In this study, we aimed to address these gaps.
+
+We reanalyzed the speech data from the PwPD sample reported in our previous work, comprising 22 speakers spanning a full range of dysarthria severity [@thompson2024]. This reanalysis allowed us to present different speech measures and stratify our analysis by severity to address the present study's aims. We simultaneously measured articulation across kinematic, acoustic, and perceptual domains. For the kinematic measures, we examined TF and TB movement to cross-sectionally test the notion of posterior-to-anterior progression of lingual impairment proposed by @logemann1978. Specifically, we examined TF and TB path distances for segments in which these fleshpoints function as the primary articulators (i.e., TF distance of an alveolar consonant-vowel-consonant \[CVC\] segment; TB distance of a diphthong). As an acoustic measure, we report vowel distance among the four corner vowels [@turner1995] to index vowel contrastivity and precision. Including this measure helps us understand the acoustic consequences of the observed kinematic patterns and enables us to connect the current study’s findings to prior acoustic-only studies. Finally, because perceptual outcomes are the primary measure of success for behavioral cue studies, we obtained measures of intelligibility and articulatory precision. We asked the two following questions:
+
+::: {.content-visible when-format="html"}
+1.  How do PwPD with varying dysarthria severity levels and HC speakers differ in terms of intelligibility, articulatory precision, acoustic vowel distance, and TF and TB distance? (Severity Effects)
+
+2.  When prompted to speak more clearly, how do PwPD with varying dysarthria severity levels and HC speakers modify their articulation (acoustic vowel distance, TF-, and TB-distance), and does this cue result in perceptual gains in intelligibility and articulatory precision? (Severity × Condition Interaction Effects)
+:::
+
+:::: {.content-visible when-format="docx"}
+::: {custom-style="List Number"}
+| How do PwPD with varying dysarthria severity levels and HC speakers differ in terms of intelligibility, articulatory precision, acoustic vowel distance, and TF and TB distance? (Severity Effects)
+
+| When prompted to speak more clearly, how do PwPD with varying dysarthria severity levels and HC speakers modify their articulation (acoustic vowel distance, TF-, and TB-distance), and does this cue result in perceptual gains in intelligibility and articulatory precision? (Severity × Condition Interaction Effects)
+:::
+::::
+
+# Method
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+```
+
+This study was approved by the Florida State University Institutional Review Board (FSU-IRB, STUDY00002525).
+
+## Speaker Methods
+
+### Speakers
+
+The same forty speakers used in @thompson2024 were used within the current study, including 22 PwPD and 18 neurologically healthy comparison speakers. The speaker demographic information is reported in @tbl-speaker-demo. Both speaker groups had the following inclusion criteria: (1) primary language is English, (2) able to read a paragraph in a 19-point font. Additional criteria for the PwPD group included (3) a neurological diagnosis of PD. The study used data from a larger project in the FSU Motor Speech Lab investigating the articulatory correlates of speech intelligibility in dysarthria. Speakers received a \$50 gift card for their participation.
+
+To obtain a data-driven, listener-based severity classification, we used intelligibility ratings as a severity-surrogate, following @stipancic2021. The severity labels reported here were derived from intelligibility ratings of the conversational condition in our prior dataset [@thompson2024]. Speakers' intelligibility was rated on a visual analog scale by 368 listeners recruited via Prolific crowdsourcing [@palan2018], resulting in 50–58 independent ratings per speaker (the perceptual experiment of this prior study matches the current study and is detailed in the listener procedures below). We averaged each speaker’s ratings and mapped them onto the classification cut-offs described in @stipancic2021: Normal (\>94%), Mild (85–94%), Moderate (70–84%), Severe (45–69%), and Profound (\<45%). The first author, a speech-language pathologist, reviewed and confirmed the resulting classifications for face validity.
+
+### Instrumentation
+
+Acoustic and kinematic data were collected simultaneously in a sound-attenuating booth using The Wave System and the WaveFront software [@wavesysa]. The audio was recorded with an AKG C1000S microphone, 30 cm from the speaker’s mouth. Acoustic data were collected at 20 kHz with 16-bit resolution, while movement data were collected at 100 Hz. Sensors were affixed to the upper and lower lip (placed on the vermilion borders), tongue front (TF; affixed 2 cm from the tongue tip along the medial surface), tongue back (TB; affixed 5 cm from the tongue tip), and jaw (adhered to the labial surface of the lower central incisors). Additionally, a reference sensor was affixed to the bridge of a pair of glasses to control head movements. The articulator points of interest in the current study were the TF and TB sensors.
+
+### Procedures and Stimuli
+
+Following the sensor application, speakers engaged in a 10-minute conversation with the examiner to acclimate to speaking while wearing sensors [@dromey2016]. After the adaptation period, participants completed various speech tasks. We analyzed productions of three phonetically controlled sentences, “Buy Bobby a puppy,” “Tess told Dan to stay fit,” and “Carl got a croaking frog,” which were selected for their inclusion of the diphthong /aɪ/ and the vowels /i, æ, o, a/. Each sentence was produced five times in a conversational style and then five times in a clear style. For the clear condition, participants were instructed to “double” their speech clarity: "If your normal speech is 100-speech clarity, I want you to speak at 200-speech clarity. For example, imagine you are talking to a hearing-impaired individual, and you have to over-articulate" [@lam2013a]. To avoid carryover from clear speech, the conversational block was always completed first [@whitfield2023a].
+
+### Articulation Measures
+
+The current study examined three measures of articulation: acoustic corner vowel distance, and tongue front (TF) and tongue back (TB) path distance. These measures were selected to capture (1) a static, global indicator of vowel articulation and (2) a dynamic, segmental measure of articulatory movement, respectively.
+
+*Acoustic corner vowel distance.* Target vowels included /i/ (from *Bobby* and *Puppy*), /æ/ (*Dan*), /o/ (*croaking*), and /ɑ/ (*Bobby*, *got*, and *frog*). Vowels were identified in the spectrographic view of Praat and manually segmented using the *TextGrid* function [@boersma2025]. A custom R script converted the TextGrid files into label (.lbl) files for use in the Time-Frequency Analysis Software Program for 32-bit Windows (TF32) [@milenkovic2004]. Formant data were visually inspected and manually corrected when tracking errors occurred.
+
+For each vowel token, the F1 and F2 values at the temporal midpoint were extracted and transformed to the Bark scale using the *emuR* package (version `r installed.packages()["emuR", "Version"]`) [@jochim2025] to account for sex-related differences in vocal tract size. Because this transformation does not fully normalize for sex [@clopper2009], sex was also included as a covariate in the statistical models.
+
+Corner vowel distance was calculated following the methods of @turner1995. For each speaker and condition, F1 and F2 midpoint values were averaged across all tokens of each corner vowel. A centroid was then derived for each speaker by averaging the F1 and F2 values of all vowel tokens produced in the conversational condition. The corner vowel distance was computed as the Euclidean distance between the F1/F2 coordinates of each corner vowel and the speaker’s centroid. This yielded 8 corner vowel distance values per speaker (4 vowels × 2 conditions).
+
+*Tongue front (TF) and tongue back (TB) distance.* For the TF measure, the target stimulus “Tess” was first identified in Praat. Then, the onset and offset of the articulatory movement were defined using the TF sensor’s extrema in the superior–inferior dimension: the onset corresponded to the most superior TF position during /t/, and the offset corresponded to the most superior TF position during /s/. For the TB measure, the target stimulus “Buy” was identified in Praat. The onset and offset of the /aɪ/ diphthong were defined using the movement extrema of the tongue back sensor in the ventral–dorsal dimension, following the procedure described by @mefferd2015. Once the target movement was identified, the two-dimensional TF or TB path distance (ventral–dorsal and anterior–posterior dimensions) was computed as the cumulative sum of Euclidean distances between successive sampling points. Each speaker had ten TF- and TB-path distance values (5 repetitions × 2 conditions).
+
+Data from one speaker with Parkinson’s disease (male, age 49, profound severity) were excluded due to sensor malfunction. Data from one speaker in the HC group (female, age 68) were excluded from the TB measure analysis because her /aɪ/ productions showed strong monophthongization consistent with Southern dialect monophthongization [@labov2006]. Although monophthongization is a natural dialectical variation, it results in a relatively stable articulatory gesture for /aɪ/, which undermines the validity of TB path distance as a measure of dynamic tongue movement for detecting clinically relevant deficits.
+
+## Listener Methods
+
+### Listeners
+
+Fifty naïve listeners were recruited for the current study via Prolific [@palan2018] to provide perceptual ratings of intelligibility and articulatory precision. Listeners met the following inclusion criteria: (1) 18 years old or older, (2) native speaker of English, (3) located in the United States of America, (4) self-reported normal hearing, and (5) no history of speech, language, or cognitive difficulties. The listeners ranged in age from 18 to 60 years old (M = 33.32, SD = 9.88) and included 27 women and 23 men. Twenty-eight listeners were white or Caucasian, 11 were Black or African American, 9 were Asian American, and 2 were biracial or multiracial. Additionally, 4 of the listeners were Hispanic or Latino. The listeners were compensated at a rate of \$12/hour for their participation and, on average, took 10.56 minutes to complete the experiment.
+
+### Procedures
+
+All listener procedures were completed via a Qualtrics survey [@qualtrics2024]. For the intelligibility ratings, the listeners were instructed to “rate how easy you find the phrase to understand” using a horizontally oriented visual analog scale (VAS), with endpoints labeled “cannot understand anything” and “understand everything” at the left and right ends, respectively. Similarly, for articulatory precision ratings, listeners were instructed to rate “how precise are the speakers’ speech movements” using a VAS, with endpoints labeled “imprecise or mumbled” speech, and “precise or clear” speech on the left and right ends of the scale, respectively [@chiu2020; @sussman2012; @tjaden2014a].
+
+Each listener was randomly assigned 12 of the 40 speakers to rate. They first rated intelligibility, then articulatory precision. For each speaker, the listener heard one of the three sentences in three recordings (one per speaking condition: conversational, more clear, less clear) presented in random order. After completing the 36 intelligibility ratings (12 speakers × 3 conditions), two speakers were randomly re-presented for repeat ratings to assess intra-rater reliability (6 additional ratings). For the articulatory precision ratings, listeners rated the same speakers, but heard a different sentence for each speaker than in the intelligibility ratings. Only ratings from the conversational and clear conditions were analyzed for the current study.
+
+The quality of listener responses was screened prior to the reliability analysis to exclude low-quality perceptual data. For each listener, the average difference between their initial rating and their intra-rater reliability trial was calculated. Listeners whose average difference scores fell more than ±2.5 standard deviations from the group mean were excluded from further analyses. This procedure resulted in the exclusion of two listeners.
+
+## Statistical Analysis
+
+All analyses were conducted in R (version `r paste0(R.Version()$major,".",R.Version()$minor)`) [@rcoreteam2025] using RStudio (version 2025.09.1+401) [@racine2012]. The full analysis scripts are available at <https://osf.io/x8tzd/>. To address our research questions, we constructed five Bayesian mixed-effects models using the Stan modeling language [@carpenter2017] through the *brms* package (version `r installed.packages()["brms", "Version"]`) [@bürkner2018]. For an overview of using Bayesian mixed-effects models using *brms* for speech data, please refer to @nalborczyk2019. The five outcome variables were intelligibility, articulatory precision, corner vowel distance, TF- and TB-path distance.
+
+*Fixed effects.* Each model included Group (HC \[reference\], mild, moderate, severe, profound) as a fixed effect to test for group and severity differences (Research Question 1) and the Group × Condition (conversational \[reference\] vs. clear) interaction to assess clarity-induced modifications (Research Question 2). Pairwise comparisons between conversational and clear conditions for each Group were conducted using the *emmeans* package (version `r installed.packages()["emmeans", "Version"]`) [@lenth2024].
+
+*Covariates.* Age was included as a covariate in all models. Sex was included as a covariate in the acoustic and kinematic models to account for differences in vocal tract anatomy. Segment duration was included in the TF and TB path distance model to ensure that observed group and clarity effects reflected articulatory differences rather than longer segment durations.
+
+*Random effects.* The intelligibility and articulatory precision models included random intercepts for both Listener ID and Speaker ID, while the acoustic and kinematic models included random intercepts for Speaker ID only.
+
+*Model priors and distributions.* All models were specified with weakly informative priors, meaning we assumed no effect of Group, Condition, or Group × Condition interaction on the target measures. For each model, intercept and slope coefficients were assigned regularizing Gaussian priors (μ = 0, σ = 10), and standard deviation parameters were assigned Cauchy priors (μ = 0, σ = 10). Because the intelligibility and articulatory precision measures were bounded between 0 and 100 with clustering near the limits, they were rescaled to a 0–1 range and modeled using a Beta distribution with gamma priors on the shape parameters (α = 10, β = 0.8). In contrast, corner vowel distance, TF- and TB-path distance were approximately normally distributed and therefore modeled using Gaussian distributions.
+
+*Model estimation and convergence.* Models were estimated using Markov Chain Monte Carlo (MCMC) sampling with four chains of 4,000 iterations each, including a warm-up/burn-in period of 1,000 iterations. Convergence was assessed in two ways. First, the R̂ statistic was used to evaluate the ratio of within- to between-chain variability; values less than 1.05 indicated satisfactory convergence. Second, trace plots were visually inspected for stationarity and adequate chain mixing.
+
+*Inference and interpretation.* For each parameter, we report the equal-tailed 95% credible interval and probability of direction (pd) (not to be confused with Parkinson’s disease \[PD\]). For pairwise comparisons between conversational and clear speech within each group, we report the 95% Highest Posterior Density (HPD) interval. A 95% credible interval is an interval that contains 95% of the posterior probability for the parameter. The pd reflects the proportion of the posterior distribution on the same side of zero as the median, representing the probability that an effect has a consistent direction. Effects were considered robust when the 95% credible interval excluded zero and pd exceeded 95%. Practically, a “robust” effect corresponds to what would traditionally be considered a statistically significant effect (p \< .05) in frequentist inference, although the underlying logic and interpretation differ.
+
+## Reliability
+
+Intra- and inter-measurer reliability for the acoustic and kinematic measurements was determined using mean absolute errors (MAEs) and standard deviation errors (SDAEs), as well as intraclass correlation coefficients (ICCs). Specifically, 20% of the data (eight speakers) were randomly selected for resegmentation and reanalysis by a second examiner (inter-measurer reliability) and by the same examiner (the first author) 2 months after the initial measurement (intra-measurer reliability). Single-rating, absolute-agreement, two-way mixed-effects ICC models were built for measures of corner dispersion, TF- and TB-distance using the *irr* package (version `r installed.packages()["irr", "Version"]`) [@gamer2019]. ICC values less than .5 were considered poor reliability, values between .5 and .75 were considered moderate reliability, values between .75 and .9 were considered good reliability, and values greater than .9 were considered excellent reliability [@koo2016].
+
+Similarly, intra-listener reliability was assessed separately for intelligibility and articulatory precision ratings using MAE, SDAE, and ICC models. Specifically, the listeners' first ratings were compared to their second reliability ratings using single-measurement, absolute-agreement, 2-way mixed-effects ICC models. The same ICC interpretation ranges described above were used.
+
+Inter-listener reliability was more challenging to assess with our experimental design, as not all listeners rated the same speakers. For this reason, ICC could not be measured for inter-listener reliability. Instead, we measured the SD of ratings for each speaker and measure, where larger SD values indicate a greater spread of ratings and therefore less agreement among listeners, and smaller SD values indicate a smaller spread and greater agreement [@hustad2015; @thompson2024].
+
+# Results
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+summary_research_questions <- readRDS(file = "01_data_summaries/summary_research_questions.rds")
+rq1 <- summary_research_questions$rq1
+rq2 <- summary_research_questions$rq2
+reliability <- readRDS(file = "01_data_summaries/summary_reliability.rds")
+mcid <- readRDS(file = "01_data_summaries/summary_mcid.rds")
+
+
+```
+
+## Reliability
+
+The inter-measurer reliability was excellent for corner vowel distance (`r reliability$corner_vowel_distance$inter$apa_ae`; `r reliability$corner_vowel_distance$inter$apa`). Similarly, the intra-measurer reliability was excellent for corner vowel distance (`r reliability$corner_vowel_distance$intra$apa_ae`; `r reliability$corner_vowel_distance$intra$apa`). The intra-listener reliability was moderate for intelligibility (`r reliability$intelligibility$intra$apa_ae`; `r reliability$intelligibility$intra$apa`) and good for articulatory precision (`r reliability$precision$intra$apa_ae`; `r reliability$precision$intra$apa`).
+
+Inter-listener reliability, which we operationalized as the variability among listeners’ ratings (SD %VAS), is shown in @fig-reliability. Rating variability differed as a function of each speaker's mean rating, with speakers near the extremes of the VAS scale showing lower variability, indicating greater agreement among listeners. In contrast, speakers with mid-range ratings showed greater variability, particularly in intelligibility ratings. This pattern aligns with previous findings that listener agreement in perceptual ratings of dysarthric speech decreases for speakers whose performance falls near the middle of the measurement scale [@bunton2007; @thompson2024].
+
+\[@fig-reliability around here.\]
+
+## Research Question 1: Differences Across Severity
+
+To examine how PwPD differed from healthy controls across measures of speech performance, we analyzed the main effect of Group in the Bayesian mixed-effects models (Figures [-@fig-intelligibility] - [-@fig-tb_distance], panel b). Reported posterior estimates represent the difference between each PwPD severity group and healthy controls, while accounting for the random intercepts and covariates included in each model. The full models are reported in the Supplemental Information, in Tables S1–S3, whereas the specific pairwise comparisons of interest were reported within the text.
+
+*Intelligibility ratings.* Posterior estimates of intelligibility ratings revealed a stepwise effect of dysarthria severity relative to healthy controls ([@fig-intelligibility]b). For mild PwPD, we estimate only a `r rq1$intelligibility$Mild_Control$apa_estimate` difference relative to control speakers (`r rq1$intelligibility$Mild_Control$apa_hpd_pd`). Similarly, for moderate PwPD, the estimated difference was `r rq1$intelligibility$Moderate_Control$apa_estimate` (`r rq1$intelligibility$Moderate_Control$apa_hpd_pd`) relative to control speakers. In contrast, severe PwPD were estimated to have an `r rq1$intelligibility$Severe_Control$apa_estimate` difference (`r rq1$intelligibility$Severe_Control$apa_hpd_pd`) relative to control speakers, while profound PwPD showed a substantially larger `r rq1$intelligibility$Profound_Control$apa_estimate` difference (`r rq1$intelligibility$Profound_Control$apa_hpd_pd`). Together, these estimates suggest similar intelligibility ratings across control, mild, and moderate PwPD, with progressively lower intelligibility in severe and profound groups.
+
+*Articulatory precision ratings.* Compared to intelligibility, posterior estimates of articulatory precision revealed more distinct and severity-specific contrasts between PwPD and healthy controls ([@fig-precision]b). Mild PwPD were estimated to differ only minimally from controls, with a `r rq1$precision$Mild_Control$apa_estimate` difference (`r rq1$precision$Mild_Control$apa_hpd_pd`). In contrast, progressively larger estimated differences were observed with increasing severity, including a `r rq1$precision$Moderate_Control$apa_estimate` difference for moderate PwPD (`r rq1$precision$Moderate_Control$apa_hpd_pd`), a `r rq1$precision$Severe_Control$apa_estimate` difference for severe PwPD (`r rq1$precision$Severe_Control$apa_hpd_pd`), and a `r rq1$precision$Profound_Control$apa_estimate` difference for profound PwPD (`r rq1$precision$Profound_Control$apa_hpd_pd`). These estimates indicate increasing reductions in articulatory precision with advancing dysarthria severity.
+
+*Corner vowel distance.* Posterior estimates of corner vowel distance revealed minimal differences among control, mild, and moderate PwPD ([@fig-vowel_distance]b). Relative to control speakers, mild PwPD showed an estimated `r rq1$corner_vowel$Mild_Control$apa_estimate` difference (`r rq1$corner_vowel$Mild_Control$apa_hpd_pd`), and moderate PwPD showed a similar `r rq1$corner_vowel$Moderate_Control$apa_estimate` difference (`r rq1$corner_vowel$Moderate_Control$apa_hpd_pd`). In contrast, reductions in corner vowel distance emerged at higher severity levels, with severe PwPD estimated to differ by `r rq1$corner_vowel$Severe_Control$apa_estimate` (`r rq1$corner_vowel$Severe_Control$apa_hpd_pd`) and profound PwPD demonstrating a larger `r rq1$corner_vowel$Profound_Control$apa_estimate` (`r rq1$corner_vowel$Profound_Control$apa_hpd_pd`) relative to controls. Overall, these estimates suggest that measurable acoustic reductions in average corner vowel distance tend to emerge only at more advanced levels of dysarthria severity.
+
+*TF distance.* Posterior estimates of TF distance revealed a nonlinear pattern across dysarthria severity levels ([@fig-tf_distance]b). Compared with control speakers, mild PwPD showed a small estimated difference of `r rq1$tf_distance$Mild_Control$apa_estimate` (`r rq1$tf_distance$Mild_Control$apa_hpd_pd`), indicating substantial overlap with controls. In contrast, moderate PwPD were estimated to exhibit increased TF movement, with a `r rq1$tf_distance$Moderate_Control$apa_estimate` difference compared to control speakers (`r rq1$tf_distance$Moderate_Control$apa_hpd_pd`). This pattern did not persist at higher severities: severe PwPD again showed minimal differences from controls (`r rq1$tf_distance$Severe_Control$apa_estimate`; `r rq1$tf_distance$Severe_Control$apa_hpd_pd`), while profound PwPD demonstrated reduced TF movement, with an estimated `r rq1$tf_distance$Profound_Control$apa_estimate` difference relative to controls (`r rq1$tf_distance$Profound_Control$apa_hpd_pd`). These estimates suggest a severity-dependent pattern characterized by comparable TF movement in mild dysarthria, increased movement in moderate dysarthria, a return toward control-like movement in severe dysarthria, and reduced movement in profound dysarthria.
+
+*TB distance.* Posterior estimates of TB distance revealed a similar but shifted nonlinear pattern relative to TF distance ([@fig-tb_distance]b). Compared with control speakers, mild PwPD were estimated to exhibit increased TB movement, with a `r rq1$tb_distance$Mild_Control$apa_estimate` difference (`r rq1$tb_distance$Mild_Control$apa_hpd_pd`). In contrast, moderate PwPD showed minimal differences from controls (`r rq1$tb_distance$Moderate_Control$apa_estimate`; `r rq1$tb_distance$Moderate_Control$apa_hpd_pd`), indicating substantial overlap. Reductions in TB distance emerged at higher severity levels, with severe PwPD estimated to differ by `r rq1$tb_distance$Severe_Control$apa_estimate` (`r rq1$tb_distance$Severe_Control$apa_hpd_pd`) and profound PwPD demonstrating a larger `r rq1$tb_distance$Profound_Control$apa_estimate` (`r rq1$tb_distance$Profound_Control$apa_hpd_pd`) relative to controls. Collectively, these estimates indicate increased TB movement in mild dysarthria, a return toward control-like movement in moderate dysarthria, and reduced TB movement in severe and profound dysarthria.
+
+\[@fig-intelligibility around here.\]
+
+\[@fig-precision around here.\]
+
+## Research Question 2: Clear Speech Gains Across Severity
+
+To examine how speakers modified their speech when cued to speak more clearly, we analyzed the interaction between Group and Condition (Figures [-@fig-intelligibility] - [-@fig-tb_distance], panel c). Reported posterior estimates are reported as the change from conversational to clear speech within each group. The full models are reported in the Supplemental Information, in Tables S1–S3, whereas the specific pairwise comparisons of interest were reported within the text.
+
+*Intelligibility ratings.* Posterior estimates of intelligibility revealed that the effects of the clear speech cue varied across controls and dysarthria severity levels ([@fig-intelligibility]c). Control speakers were estimated to show a consistent increase in intelligibility when speaking clearly, with a `r rq2$intelligibility$Control$apa_estimate` gain relative to conversational speech (`r rq2$intelligibility$Control$apa_hpd_pd`). In contrast, mild PwPD showed little evidence of intelligibility benefit from the clear speech cue, with an estimated `r rq2$intelligibility$Mild$apa_estimate` change (`r rq2$intelligibility$Mild$apa_hpd_pd`). Moderate PwPD were estimated to experience a `r rq2$intelligibility$Moderate$apa_estimate` increase in intelligibility (`r rq2$intelligibility$Moderate$apa_hpd_pd`), and severe PwPD showed a similar estimated increase of `r rq2$intelligibility$Severe$apa_estimate` (`r rq2$intelligibility$Severe$apa_hpd_pd`), although the posterior distributions overlapped with zero, indicating less certainty of these effects. Finally, profound PwPD demonstrated a larger and more consistent intelligibility benefit from the clear speech cue, with an estimated `r rq2$intelligibility$Profound$apa_estimate` increase (`r rq2$intelligibility$Profound$apa_hpd_pd`).
+
+*Articulatory precision ratings.* In contrast to intelligibility, posterior estimates of articulatory precision revealed a more consistent effect of the clear speech cue across control speakers and most dysarthria severity levels ([@fig-precision]c). Control speakers were estimated to show a clear increase in articulatory precision when speaking clearly, with a `r rq2$precision$Control$apa_estimate` gain relative to conversational speech (`r rq2$precision$Control$apa_hpd_pd`). Similar gains were observed for mild PwPD (`r rq2$precision$Mild$apa_estimate`; `r rq2$precision$Mild$apa_hpd_pd`), moderate PwPD (`r rq2$precision$Moderate$apa_estimate`; `r rq2$precision$Moderate$apa_hpd_pd`), and severe PwPD (`r rq2$precision$Severe$apa_estimate`; `r rq2$precision$Severe$apa_hpd_pd`), all of whom demonstrated consistent increases in articulatory precision when speaking clearly. In contrast, profound PwPD showed little evidence of precision-related benefits from the clear speech cue, with an estimated `r rq2$precision$Profound$apa_estimate` change (`r rq2$precision$Profound$apa_hpd_pd`).
+
+*Corner vowel distance.* Posterior estimates of corner vowel distance indicated that the acoustic benefits of the clear speech cue decreased with increasing dysarthria severity ([@fig-vowel_distance]c). Control speakers (`r rq2$corner_vowel$Control$apa_estimate`; `r rq2$corner_vowel$Control$apa_hpd_pd`) and mild PwPD (`r rq2$corner_vowel$Mild$apa_estimate`; `r rq2$corner_vowel$Mild$apa_hpd_pd`) were estimated to produce larger vowel distances in the clear condition relative to conversational speech. In contrast, clear-speech effects were smaller and less certain for moderate PwPD (`r rq2$corner_vowel$Moderate$apa_estimate`; `r rq2$corner_vowel$Moderate$apa_hpd_pd`) and severe PwPD (`r rq2$corner_vowel$Severe$apa_estimate`; `r rq2$corner_vowel$Severe$apa_hpd_pd`). Finally, profound PwPD showed little evidence of benefit from the clear speech cue, with an estimated `r rq2$corner_vowel$Profound$apa_estimate` change (`r rq2$corner_vowel$Profound$apa_hpd_pd`).
+
+*TF distance.* As with corner vowel distance, posterior estimates of TF distance indicated that the kinematic benefits of the clear speech cue decreased with increasing dysarthria severity ([@fig-tf_distance]c). Control speakers (`r rq2$tf_distance$Control$apa_estimate`; `r rq2$tf_distance$Control$apa_hpd_pd`) and mild PwPD (`r rq2$tf_distance$Mild$apa_estimate`; `r rq2$tf_distance$Mild$apa_hpd_pd`) were estimated to exhibit larger TF movement when speaking clearly relative to conversational speech. In contrast, moderate PwPD showed a smaller and less certain estimated increase in TF movement (`r rq2$tf_distance$Moderate$apa_estimate`; `r rq2$tf_distance$Moderate$apa_hpd_pd`). Similarly, severe PwPD (`r rq2$tf_distance$Severe$apa_estimate`; `r rq2$tf_distance$Severe$apa_hpd_pd`) and profound PwPD (`r rq2$tf_distance$Profound$apa_estimate`; `r rq2$tf_distance$Profound$apa_hpd_pd`) were estimated to show minimal and uncertain changes in TF distance in response to the clear speech cue.
+
+*TB distance.* In contrast to TF distance, posterior estimates of TB distance revealed a more consistent positive effect of the clear speech cue across control speakers and most dysarthria severity levels ([@fig-tb_distance]c). Relative to conversational speech, clear speech was estimated to elicit larger TB distance for control speakers (`r rq2$tb_distance$Control$apa_estimate`; `r rq2$tb_distance$Control$apa_hpd_pd`), mild PwPD (`r rq2$tb_distance$Mild$apa_estimate`; `r rq2$tb_distance$Mild$apa_hpd_pd`), moderate PwPD (`r rq2$tb_distance$Moderate$apa_estimate`; `r rq2$tb_distance$Moderate$apa_hpd_pd`), and severe PwPD (`r rq2$tb_distance$Severe$apa_estimate`; `r rq2$tb_distance$Severe$apa_hpd_pd`). Profound PwPD were also estimated to show increased TB movement, with a `r rq2$tb_distance$Profound$apa_estimate` change (`r rq2$tb_distance$Profound$apa_hpd_pd`), although posterior uncertainty was greater for this group.
+
+\[@fig-vowel_distance around here.\]
+
+\[@fig-tf_distance around here.\]
+
+\[@fig-tb_distance around here.\]
+
+# Discussion
+
+## Severity-dependent speech patterns in PwPD
+
+Our first aim was to characterize how PwPD across dysarthria severity levels differ from control speakers in intelligibility, articulatory precision, acoustic vowel distance, and lingual kinematics. Across measures, speech performance was clearly severity-dependent; however, these differences did not follow a strictly linear decline from control to profound dysarthria. Instead, mild PwPD were frequently estimated to perform comparably to, or in some cases exceed, control speakers. For many measures, the expected pattern of PwPD underperforming control speakers did not emerge until more severe and profound dysarthria levels.
+
+In the present study, mild PwPD and control speakers showed comparable ratings of intelligibility and articulatory precision, as well as corner vowel distance and TF distance. In contrast, mild PwPD were estimated to exhibit larger TB distance than control speakers. Although this finding may appear counterintuitive, it aligns with prior reports of increased posterior lingual movement but preserved anterior movement in early PD [@wong2010a], and with recent findings of greater lingual movement in the early stages of PD [@thies2023]. These results suggest that enlarged posterior lingual movements may reflect either increased instability in posterior tongue control [@wong2010a] or a compensatory adjustment that precedes observable articulatory decline [@thies2023]. Together, these findings suggest that dysarthria severity may account for the seemingly contradictory reports of larger, comparable, and reduced lingual movement in PwPD, with the direction of difference depending on where a speaker falls along the severity continuum.
+
+A similar compensatory interpretation may account for the increased TF distance observed in moderate PwPD relative to controls, followed by reduced movement at higher severity levels. This pattern suggests that the timing and expression of impairment and compensatory behavior differ across lingual regions (i.e., TB compensation may peak around mild severity, whereas TF compensation may peak around moderate severity). Such an interpretation is broadly consistent with the posterior-to-anterior progression of lingual impairment proposed by @logemann1978. However, it is important to note that the TB sensor in the present study was affixed approximately 5 cm from the tongue tip and does not directly capture tongue dorsum movement. Future work would benefit from severity-stratified investigations incorporating additional posterior lingual sensors to more directly test this notion of posterior-to-anterior lingual progression in PD.
+
+Interestingly, although these potentially compensatory or imprecision patterns were observed for TF and TB movement, the pattern was not observed for corner vowel distance. Two potential explanations may account for this finding. First, these articulatory gestures may be compensatory, and, in combination with the other articulators not captured in the current study, these PwPD may be successfully maintaining the control-like acoustic signal. Another possibility is that the acoustic vowel distance measure is too insensitive to these articulatory disruptions. Importantly, the TF/TB movement measures and the acoustic vowel distance measure were measured from differing stimuli: TF distance was examining dynamic movement for CVC productions, and TB distance was measured from diphthong production, whereas acoustic vowel distance examined stable monophthongs. Therefore, consonants and speech segments requiring dynamic lingual movement may be more sensitive to PwPD dysarthria severity than acoustic measures of monophthong vowels.
+
+## Response to clear speech cues across severity levels
+
+Our second aim was to characterize how control speakers and PwPD across dysarthria severity levels modify their intelligibility, articulatory precision, acoustic vowel distance, and lingual kinematics when prompted to speak more clearly. A global takeaway is that speakers across the dysarthria severity spectrum do not uniformly benefit from clear speech cues, and substantial variability was observed, as indicated by wide posterior estimates.
+
+Consistent intelligibility gains for clear speech were observed for control speakers (a modest +`r mcid$Control$est_gain_apa`, likely due to ceiling effects) and for profound PwPD (+`r mcid$Profound$est_gain_apa`), indicating that 95% of the estimated posterior was greater than 0. In contrast, mild, moderate, and severe groups showed wider and less certain gains, with 95% credible intervals overlapping with 0. Importantly, however, consistent intelligibility gains do not necessarily indicate meaningful gains. @stipancic2024 examined minimally clinically important differences (MCIDs) in speech intelligibility among control speakers, speakers with multiple sclerosis, and PwPD to determine the minimal required change in intelligibility to be perceived as clinically meaningful. They identified an MCID threshold of 7% for small differences and 15% for large differences. Applying the 7% threshold, the proportions of each group's posterior distribution exceeding it were: `r mcid$Control$pd_07_apa` for controls, `r mcid$Mild$pd_07_apa` for mild PwPD, `r mcid$Moderate$pd_07_apa` for moderate, `r mcid$Severe$pd_07_apa` for severe, and `r mcid$Profound$pd_07_apa` for profound. These numbers suggest that PwPD with more severe dysarthria may be more likely to achieve clinically meaningful intelligibility gains from clear speech. These values also demonstrate that the response to clear speech is highly variable, particularly for mild, moderate, and severe dysarthria. However, it is important to acknowledge that applying these MCID thresholds may not be entirely appropriate, given that the current study measured intelligibility via VAS, whereas @stipancic2024 derived their thresholds from orthographic transcription data.
+
+In contrast to intelligibility, articulatory precision ratings were consistently higher in clear speech for all speakers, with the exception of profound PwPD. Interestingly, despite clear speech gains in intelligibility, profound PwPD demonstrated minimal gains in articulatory precision ratings. This may suggest that, for clear speech, most speakers use articulatory modifications to varying degrees to increase precision, whereas those with profound PwPD may rely on alternative strategies, such as increasing loudness or slowing rate, rather than articulatory modifications. This speculation is supported by our findings of minimal estimated clear speech gains for the corner vowel distance and TF distance measures among the profound PwPD group. This would also be consistent with @tjaden2014a, who found that clear speech improved intelligibility in PwPD but not perceived speech severity. Another possible explanation relates to floor effects in articulatory precision ratings. Profound PwPD may have such severely impaired articulation at baseline that listeners cannot perceive meaningful improvement, even when some articulatory modification occurs, as tentatively evidenced by the TB distance findings. Notably, research examining perceptual ratings of articulatory precision across dysarthria severity levels remains limited, making it difficult to draw firm conclusions about the sensitivity of this measure at severity extremes. Future studies should investigate whether profound PwPD preferentially rely on strategies such as increased loudness or reduced speech rate to achieve clear speech gains in intelligibility, and whether articulatory precision ratings are sufficiently sensitive to detect change at the extremes of dysarthria severity.
+
+Robust clear speech gains in corner vowel distance and TF distance were observed for control speakers and mild PwPD, while moderate, severe, and profound PwPD showed less certain estimated gains, with posterior distributions overlapping with 0. These patterns generally follow the hypothesized progression of increasing articulatory impairment resulting in reduced ability to modify clear speech. In contrast, robust clear speech gains were consistently observed across all speakers for TB distance, except for profound PwPD, whose 95% CrI narrowly overlapped with 0. This finding was surprising and was difficult to reconcile with the posterior-to-anterior progression of lingual impairment proposed by @logemann1978. However, it is important to note the different stimuli used for each measure: TF distance was measured from the CVC of “Tess” (primarily capturing superior-inferior movement), whereas TB distance was measured from /aɪ/ in "Buy" (primarily capturing anterior-posterior movement). We propose that speakers across dysarthria severity may have relied on exaggerated jaw movements to increase TB distance during clear speech. In contrast, PwPD may already have relied on larger jaw movements to achieve greater CVC TF distance in conversational speech, and thus, when prompted to speak more clearly, could not increase their reliance further. This explanation is broadly consistent with previous research showing that articulatory changes in /aɪ/ in response to clear speech are primarily driven by jaw movement rather than lingual movement in PwPD, regardless of articulatory impairment status [@mefferd2019]. Nevertheless, examining differential impairment between TF and TB using dimension-specific trajectories would help clarify the relative contributions of intrinsic tongue movement and jaw coupling to clear speech across dysarthria severity levels.
+
+## Clinical Implications
+
+The present study generally supports the use of clear speech for speakers with PwPD, yielding clinically meaningful gains in intelligibility (particularly for profound PwPD) and improvements in articulatory precision and TB distance measures. Gains were not consistently observed in corner vowel distance or TF distance, suggesting that speakers may be using non-articulatory strategies to achieve clear speech (e.g., speaking louder or slower). Importantly, the magnitude of clear speech gains varied across levels of severity, likely due to the progression of subsystem involvement. Further, even within severity levels, PwPD demonstrated variable responses to clear speech, suggesting that factors beyond severity influence who responds well to these cues. Understanding what factors or baseline characteristics predict clear speech response could help clinicians identify who is most likely to benefit from this cue. A growing number of studies are examining baseline characteristics of PwPD who respond versus do not respond to behavioral speech cues, such as clear, loud, and slow cues [@kim2026; @fletcher2017].
+
+Speakers in our study were prompted to speak more clearly with the following instructions: “If your normal speech is 100-speech clarity, I want you to speak at 200-speech clarity. For example, imagine you are talking to a hearing-impaired individual, and you have to over-articulate" [@lam2013a]. This prompt implicitly encourages multiple strategies, including over-articulation, rate reduction, and increased loudness. It is possible that successful responders to this cue implemented modifications to their articulation, rate, and prosody, whereas non-responders implemented only one strategy or none. Speakers who relied on a single strategy may have benefited from targeted follow-up cues directing attention to additional modifications. More work should examine the different “paths” to achieving clear speech [@tjaden2014] and determine which are more accessible to PwPD of varying severity levels.
+
+## Methodological Implications
+
+The present study demonstrates the value of considering severity when characterizing dysarthria in PwPD. Although severity is generally assumed to be a critical determinant of speech characteristics, it is often not treated as such in experimental research [@kim2011]. In some cases, it may not be informative to simply describe PwPD as a whole across severities, because, as seen in the present study with TF and TB distance, there is often a more complex interaction between articulatory involvement and severity levels that goes beyond the expected linear pattern. Lingual movement may increase before decreasing over the course of PD progression. Yet collapsing PwPD across severity levels risks obscuring these severity-specific patterns.
+
+Many dysarthria studies do not have enough participants with more severe impairment to support conventional stratified analyses, making severity-specific inference difficult. This is a common challenge in dysarthria research. Bayesian modeling, as used in the current study, can be useful in this setting because it yields posterior distributions that directly quantify uncertainty, rather than focusing primarily on binary significance decisions. These posterior estimates arise from a structured statistical model that can account for multiple sources of variability in the data, such as differences between speakers and listeners, and can partially pool information across observations [see @nalborczyk2019 for a Bayesian primer]. This does not eliminate the importance of sample size: when subgroup samples are small, posterior estimates remain uncertain and are more sensitive to model assumptions. Still, reporting full posterior distributions may be more informative than relying only on dichotomous hypothesis tests when working with limited samples. Even when Bayesian methods are not used, descriptive severity-specific analyses can still help deepen our understanding of dysarthria.
+
+## Limitations and Future Directions
+
+Several limitations should be noted. Although we stratified by severity, the sample sizes within each level were small (n = 5-6), and findings should be interpreted accordingly. To account for these smaller samples, we employed a mixed-model approach that leveraged both between- and within-subject variance, partially offsetting the limitations of small per-group samples. Additionally, the groups were not perfectly balanced by sex and age. We attempted to account for this by including age and sex as fixed effects in our models, yet we acknowledge that a more balanced sample may allow for more powerful modeling.
+
+The present study used short phrases as stimuli, and the current findings may not generalize to longer, more ecologically valid connected speech. Future work should examine severity-specific dysarthria features in connected speech. This line of investigation may be particularly valuable, given that extemporaneous speech may place greater cognitive demands on the speaker and may uniquely interact with severity. That is, even greater severity effects may be observed in a more cognitively demanding task, as PD progression is associated with increased cognitive involvement [@wallace2022].
+
+The current study used VAS ratings for intelligibility measurements. We acknowledge that this differs from the gold-standard method of orthographic transcription. As a result, we were unable to directly apply the MCIDs thresholds described earlier [@stipancic2024]. Future work examining clear speech outcomes in dysarthria should utilize orthographic transcriptions to capitalize on this MCID work.
+
+Finally, future studies examining articulator-specific differential impairment in dysarthria should use stimuli that facilitate easier comparison. As previously noted, TF distance was measured from the CVC of “Tess” (which primarily involves superior-inferior movement), whereas TB distance was measured from /aɪ/ in “Buy” (which primarily involves anterior-posterior movement). We selected these tokens specifically because we wanted segments that primarily relied on the articulator of interest. However, selecting stimuli that engage both articulators within the same movement dimension would enable a more direct comparison of severity-dependent impairment across tongue regions.
+
+## Conclusions
+
+The current study examined the perceptual, acoustic, and kinematic speech characteristics across dysarthria severity levels in PwPD. While the perceptual and acoustic measures examined followed the expected pattern of progressive decline with increasing severity, the kinematic measures demonstrated a more complex pattern: increasing relative to control speakers before decreasing at later severity levels. This study offers dysarthria severity as the “missing piece” to make sense of the prior contradictory reports of larger, comparable, or smaller lingual movements in PwPD compared to control speakers. Although clear speech was broadly effective, the magnitude of benefit varied by severity level, and the articulatory strategies underlying these gains appear to differ across speakers, highlighting the need for individualized approaches to behavioral speech intervention in PD. Moreover, considering severity in dysarthria research can not only make sense of conflicting findings in the literature but also advance our understanding of the underlying disease progression.
+
+# Acknowledgements
+
+We would like to thank our participants who dedicated their time, lips, and tongues to this study. This work was supported by the NIH NIDCD F31 DC020121 (awarded to Austin Thompson) and R03 DC012405 (awarded to Yunjung Kim), and the LA Board of Regents Support Fund (awarded to Yunjung Kim).
+
+# Data Availability Statement
+
+The cleaned data for analyses, analysis scripts, and supplemental information are publicly available on the Open Science Framework (OSF; available from <https://osf.io/x8tzd/>). The raw data, including audio files, are not publicly available due to not having consent for sharing audio recordings.
+
+# References
+
+::: {#refs}
+:::
+
+{{< pagebreak >}}
+
+# Figures
+
+#### Figure 1
+::: {#fig-reliability}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+knitr::include_graphics(path = "../02_figures/fig_01_interlistener_reliability.png")
+```
+
+The mean and standard deviation of ratings across speakers.
+:::
+
+ALT TEXT:
+Scatter plot titled "Inter-listener Reliability" showing two panels side by side. Both panels plot Rating Variability (SD % VAS) on the y-axis (range 0–40) against Average Rating (Mean % VAS) on the x-axis (range 0–100). Points are colored by group: orange for Controls and blue for PwPD. A quadratic trend line in each panel shows an inverted-U shape, indicating that rating variability peaks at moderate average ratings and decreases at the extremes.
+
+In the Intelligibility panel, Controls cluster at high average ratings (mean range: \~85–97%) with low variability (SD range: \~5–24%), while PwPD span a wider range of average ratings (\~20–97%) with variability peaking around average ratings of 40–70% (SD up to \~39%).
+
+In the Articulatory Precision panel, Controls again cluster at higher average ratings (\~64–95%) with low to moderate variability (SD range: \~9–31%), while PwPD span a broader range (\~7–96%) with higher variability at moderate average ratings (SD up to \~33%).
+
+The pattern in both panels reflects the expected variance-mean relationship for bounded rating scales: variability is constrained near the floor and ceiling, and greatest in the middle range — which corresponds primarily to the PwPD group.
+
+#### Figure 2
+::: {#fig-intelligibility}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+knitr::include_graphics(path = "../02_figures/fig_02_intelligibility.png")
+```
+
+Predicted intelligibility ratings across dysarthria severity groups and speaking conditions.
+
+Panel (a) shows posterior predictions of intelligibility ratings for each group in conversational (orange) and clear (blue) speech, after controlling for speaker age. Panel (b) shows the average marginal effect of group, representing the estimated difference in intelligibility between each PwPD severity group and control speakers at conversational speech. Panel (c) shows the average marginal effect of condition, representing the estimated change in intelligibility from conversational to clear speech within each group. Filled circles represent posterior medians and horizontal lines represent 95% HPD intervals. Dark filled circles with solid lines indicate robust effects (95% HPD excluding zero and pd \> .95); open circles with lighter lines indicate non-robust effects.
+:::
+
+ALT TEXT:
+Three-panel figure titled "Intelligibility" showing Bayesian posterior distributions and marginal effects across speaker groups (Control, Mild, Moderate, Severe, Profound PwPD).
+
+Panel (a) – Posterior Predictions. Half-violin plots show predicted intelligibility ratings (% VAS) in conversational (orange) and clear (blue) speech after controlling for speaker age. Control, Mild, and Moderate groups cluster near the high end of the scale (approximately 75–100%). Severe PwPD show lower and more variable predictions (approximately 50–85%), and Profound PwPD show substantially lower predictions (approximately 10–50%).
+
+Panel (b) – Group Effect (Research Question 1). Posterior distributions of the average marginal effect of group (PwPD minus Control) at conversational speech. Mild PwPD showed a small estimated difference of +2.34% (95% HPD [−3.85, 7.93], pd = .78; not robust). Moderate PwPD showed an estimated difference of −1.90% (95% HPD [−10.29, 4.99], pd = .69; not robust). Severe PwPD showed an estimated difference of −11.77% (95% HPD [−21.85, −2.95], pd = 1.00; robust). Profound PwPD showed a substantially larger estimated difference of −53.36% (95% HPD [−63.11, −42.95], pd = 1.00; robust).
+
+Panel (c) – Condition Effect (Research Question 2). Posterior distributions of the average marginal effect of condition (clear minus conversational) within each group. Control speakers showed a robust estimated gain of +2.98% (95% HPD [0.84, 5.13], pd = 1.00). Mild (+0.68%; 95% HPD [−2.71, 4.26], pd = .66), Moderate (+2.66%; 95% HPD [−1.96, 7.65], pd = .87), and Severe (+3.56%; 95% HPD [−3.61, 10.95], pd = .84) PwPD showed non-robust estimated gains. Profound PwPD showed a robust estimated gain of +8.78% (95% HPD [1.27, 16.62], pd = .99).
+
+#### Figure 3
+::: {#fig-precision}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+knitr::include_graphics(path = "../02_figures/fig_03_precision.png")
+```
+
+Predicted precision ratings across dysarthria severity groups and speaking conditions.
+
+Panel (a) shows posterior predictions of articulatory precision ratings for each group in conversational (orange) and clear (blue) speech, after controlling for speaker age. Panel (b) shows the average marginal effect of group, representing the estimated difference in precision between each PwPD severity group and control speakers at conversational speech. Panel (c) shows the average marginal effect of condition, representing the estimated change in precision from conversational to clear speech within each group. Filled circles represent posterior medians and horizontal lines represent 95% HPD intervals. Dark filled circles with solid lines indicate robust effects (95% HPD excluding zero and pd \> .95); open circles with lighter lines indicate non-robust effects.
+:::
+
+ALT TEXT:
+Three-panel figure titled "Articulatory Precision" showing Bayesian posterior distributions and marginal effects across speaker groups (Control, Mild, Moderate, Severe, Profound PwPD).
+
+Panel (a) – Posterior Predictions. Half-violin plots show predicted articulatory precision ratings (% VAS) in conversational (orange) and clear (blue) speech after controlling for speaker age. Control and Mild groups cluster near the high end of the scale (approximately 75–100%). Moderate PwPD show lower and more spread predictions (approximately 50–85%), Severe PwPD show further reduced predictions (approximately 25–65%), and Profound PwPD show substantially lower predictions concentrated near the low end of the scale (approximately 5–35%).
+
+Panel (b) – Group Effect (Research Question 1). Posterior distributions of the average marginal effect of group (PwPD minus Control) at conversational speech. Mild PwPD showed a small estimated difference of +2.04% (95% HPD [−5.16, 8.33], pd = .72; not robust). Moderate PwPD showed an estimated difference of −9.87% (95% HPD [−19.77, −0.41], pd = .98; robust). Severe PwPD showed an estimated difference of −25.72% (95% HPD [−36.65, −14.38], pd = 1.00; robust). Profound PwPD showed a substantially larger estimated difference of −52.34% (95% HPD [−60.89, −42.81], pd = 1.00; robust).
+
+Panel (c) – Condition Effect (Research Question 2). Posterior distributions of the average marginal effect of condition (clear minus conversational) within each group. Control speakers showed a robust estimated gain of +4.77% (95% HPD [2.22, 7.42], pd = 1.00). Mild PwPD showed a robust estimated gain of +5.23% (95% HPD [1.30, 9.47], pd = 1.00). Moderate PwPD showed a robust estimated gain of +8.62% (95% HPD [2.22, 15.63], pd = 1.00). Severe PwPD showed a robust estimated gain of +11.88% (95% HPD [2.49, 20.49], pd = 1.00). Profound PwPD showed a non-robust estimated change of −1.19% (95% HPD [−8.25, 6.04], pd = .63).
+
+#### Figure 4
+::: {#fig-vowel_distance}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+knitr::include_graphics(path = "../02_figures/fig_04_corner_vowel_distance.png")
+```
+
+Predicted corner vowel distance across dysarthria severity groups and speaking conditions.
+
+Panel (a) shows posterior predictions of corner vowel distance for each group in conversational (orange) and clear (blue) speech, after controlling for speaker age and sex. Panel (b) shows the average marginal effect of group, representing the estimated difference in corner vowel distance between each PwPD severity group and control speakers at conversational speech. Panel (c) shows the average marginal effect of condition, representing the estimated change in corner vowel distance from conversational to clear speech within each group. Filled circles represent posterior medians and horizontal lines represent 95% HPD intervals. Dark filled circles with solid lines indicate robust effects (95% HPD excluding zero and pd \> .95); open circles with lighter lines indicate non-robust effects.
+:::
+
+ALT TEXT:
+Three-panel figure titled "Corner Vowel Distance" showing Bayesian posterior distributions and marginal effects across speaker groups (Control, Mild, Moderate, Severe, Profound PwPD).
+
+Panel (a) – Posterior Predictions. Half-violin plots show predicted corner vowel distance (Bark) in conversational (orange) and clear (blue) speech after controlling for speaker age and sex. Control and Mild groups show overlapping distributions centered around 2.0–2.5 Bark, with the clear condition shifted slightly higher. Moderate and Severe groups show somewhat lower and more variable predictions. Profound PwPD show the lowest predicted distances, concentrated near 1.5–2.0 Bark with minimal separation between conditions.
+
+Panel (b) – Group Effect (Research Question 1). Posterior distributions of the average marginal effect of group (PwPD minus Control) at conversational speech. Mild PwPD showed a negligible estimated difference of +0.03 Bark (95% HPD [−0.33, 0.40], pd = .57; not robust). Moderate PwPD showed a similarly negligible estimated difference of +0.03 Bark (95% HPD [−0.33, 0.41], pd = .56; not robust). Severe PwPD showed an estimated difference of −0.24 Bark (95% HPD [−0.60, 0.12], pd = .91; not robust). Profound PwPD showed a larger estimated difference of −0.49 Bark (95% HPD [−0.84, −0.13], pd = 1.00; robust).
+
+Panel (c) – Condition Effect (Research Question 2). Posterior distributions of the average marginal effect of condition (clear minus conversational) within each group. Control speakers showed a robust estimated gain of +0.32 Bark (95% HPD [0.15, 0.50], pd = 1.00). Mild PwPD showed a robust estimated gain of +0.40 Bark (95% HPD [0.06, 0.71], pd = .99). Moderate PwPD showed a non-robust estimated gain of +0.16 Bark (95% HPD [−0.18, 0.47], pd = .83). Severe PwPD showed a non-robust estimated gain of +0.16 Bark (95% HPD [−0.13, 0.47], pd = .85). Profound PwPD showed a non-robust estimated change of +0.02 Bark (95% HPD [−0.29, 0.32], pd = .56).
+
+#### Figure 5
+::: {#fig-tf_distance}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+knitr::include_graphics(path = "../02_figures/fig_05_tf_distance.png")
+```
+
+Predicted tongue front (TF) distance across dysarthria severity groups and speaking conditions.
+
+TF distance was measured from the tongue front sensor during productions of /tɛs/ in "Tess." Panel (a) shows posterior predictions of TF distance for each group in conversational (orange) and clear (blue) speech, after controlling for segment duration, and speaker age and sex. Panel (b) shows the average marginal effect of group, representing the estimated difference in TF distance between each PwPD severity group and control speakers at conversational speech. Panel (c) shows the average marginal effect of condition, representing the estimated change in TF distance from conversational to clear speech within each group. Filled circles represent posterior medians and horizontal lines represent 95% HPD intervals. Dark filled circles with solid lines indicate robust effects (95% HPD excluding zero and pd \> .95); open circles with lighter lines indicate non-robust effects.
+:::
+
+ALT TEXT:
+Three-panel figure titled "TF Distance" showing Bayesian posterior distributions and marginal effects of tongue front (TF) path distance during productions of /tɛs/ in "Tess," across speaker groups (Control, Mild, Moderate, Severe, Profound PwPD).
+
+Panel (a) – Posterior Predictions. Half-violin plots show predicted TF distance (mm) in conversational (orange) and clear (blue) speech after controlling for segment duration, speaker age, and sex. Control and Mild groups show distributions centered around 20–25 mm, with the clear condition shifted slightly higher. Moderate PwPD show a similar range with modest separation between conditions. Severe and Profound PwPD show lower predicted distances concentrated around 15–20 mm, with minimal separation between conditions.
+
+Panel (b) – Group Effect (Research Question 1). Posterior distributions of the average marginal effect of group (PwPD minus Control) at conversational speech. Mild PwPD showed a negligible estimated difference of +0.94 mm (95% HPD [−6.07, 7.47], pd = .61; not robust). Moderate PwPD showed an estimated increase of +5.82 mm (95% HPD [−1.34, 12.96], pd = .95; not robust). Severe PwPD showed a negligible estimated difference of −0.23 mm (95% HPD [−7.18, 6.33], pd = .52; not robust). Profound PwPD showed an estimated reduction of −4.93 mm (95% HPD [−11.58, 1.87], pd = .92; not robust).
+
+Panel (c) – Condition Effect (Research Question 2). Posterior distributions of the average marginal effect of condition (clear minus conversational) within each group. Control speakers showed a robust estimated gain of +3.87 mm (95% HPD [1.99, 5.77], pd = 1.00). Mild PwPD showed a robust estimated gain of +6.97 mm (95% HPD [3.30, 10.19], pd = 1.00). Moderate PwPD showed a non-robust estimated gain of +2.44 mm (95% HPD [−0.76, 5.99], pd = .93). Severe PwPD showed a non-robust estimated change of +1.12 mm (95% HPD [−1.91, 4.13], pd = .77). Profound PwPD showed a non-robust estimated change of +0.42 mm (95% HPD [−2.72, 3.52], pd = .60).
+
+#### Figure 6
+::: {#fig-tb_distance}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+knitr::include_graphics(path = "../02_figures/fig_06_tb_distance.png")
+```
+
+Predicted tongue back (TB) distance across dysarthria severity groups and speaking conditions.
+
+TB distance was measured from the tongue back sensor during productions of /aɪ/ in "Buy." Panel (a) shows posterior predictions of TB distance for each group in conversational (orange) and clear (blue) speech, after controlling for segment duration, speaker age and sex. Panel (b) shows the average marginal effect of group, representing the estimated difference in TB distance between each PwPD severity group and control speakers at conversational speech. Panel (c) shows the average marginal effect of condition, representing the estimated change in TB distance from conversational to clear speech within each group. Filled circles represent posterior medians and horizontal lines represent 95% HPD intervals. Dark filled circles with solid lines indicate robust effects (95% HPD excluding zero and pd \> .95); open circles with lighter lines indicate non-robust effects.
+:::
+
+ALT TEXT:
+Three-panel figure titled "TB Distance" showing Bayesian posterior distributions and marginal effects of tongue back (TB) path distance during productions of /aɪ/ in "Buy," across speaker groups (Control, Mild, Moderate, Severe, Profound PwPD).
+
+Panel (a) – Posterior Predictions. Half-violin plots show predicted TB distance (mm) in conversational (orange) and clear (blue) speech after controlling for segment duration, speaker age, and sex. Control and Mild groups show distributions centered around 15–20 mm, with the clear condition shifted slightly higher. Moderate PwPD show a similar range with modest separation between conditions. Severe and Profound PwPD show lower predicted distances concentrated around 10–15 mm, with some separation between conditions still visible.
+
+Panel (b) – Group Effect (Research Question 1). Posterior distributions of the average marginal effect of group (PwPD minus Control) at conversational speech. Mild PwPD showed an estimated increase of +5.11 mm (95% HPD [−0.07, 10.83], pd = .97; not robust). Moderate PwPD showed a negligible estimated difference of −0.36 mm (95% HPD [−6.09, 5.45], pd = .55; not robust). Severe PwPD showed an estimated reduction of −5.51 mm (95% HPD [−10.63, 0.13], pd = .97; not robust). Profound PwPD showed a larger estimated reduction of −7.11 mm (95% HPD [−12.89, −1.46], pd = .99; robust).
+
+Panel (c) – Condition Effect (Research Question 2). Posterior distributions of the average marginal effect of condition (clear minus conversational) within each group. Control speakers showed a robust estimated gain of +3.37 mm (95% HPD [1.51, 5.33], pd = 1.00). Mild PwPD showed a robust estimated gain of +3.93 mm (95% HPD [0.82, 6.84], pd = 1.00). Moderate PwPD showed a robust estimated gain of +4.01 mm (95% HPD [1.00, 6.91], pd = 1.00). Severe PwPD showed a robust estimated gain of +2.97 mm (95% HPD [0.33, 5.53], pd = .99). Profound PwPD showed a non-robust estimated gain of +2.60 mm (95% HPD [−0.08, 5.27], pd = .97).
+
+{{< pagebreak >}}
+
+# Tables
+::: {#tbl-speaker-demo}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+library(htmltools)
+
+htmltools::includeHTML(path = "../03_tables/tbl_01_speaker_demo.html")
+```
+
+Speaker group demographics.
+:::

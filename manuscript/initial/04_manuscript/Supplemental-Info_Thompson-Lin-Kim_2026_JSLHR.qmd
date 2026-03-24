@@ -1,0 +1,87 @@
+---
+title: "Supplemental Information: Severity-Dependent Speech Characteristics and Clear Speech Response in Parkinson's Disease: Perceptual, Acoustic, and Lingual Kinematic Findings"
+author: "Austin Thompson^1^, Lifeng Lin^2^, and Yunjung Kim^3^"
+abstract: |
+  1.	Department of Communication Sciences and Disorders, University of Houston
+  2.	Department of Epidemiology and Biostatistics, University of Arizona
+  3.	School of Communication Science and Disorders, Florida State University
+abstract-title: Affiliations
+format:
+  docx:
+    # this holds the style template for the word document
+    reference-doc: "../../templates-data/custom-reference_supplemental-info.docx"
+    # this holds the style template for the word document
+    pandoc-args: ["-Fpandoc-crossref"]
+  #html:
+   # toc: true
+    #toc_float: true
+    #html-math-method: katex
+    #css: styles.css
+    #embed-resources: true
+    #self-contained-math: true
+    #fig-cap-location: top
+params:
+  spec: "initial"   # or "rev1"
+editor: visual
+bibliography: references.bib
+csl: "../../apa.csl"
+crossref:
+  custom:
+    - kind: float
+      key: supptbl
+      latex-env: supptbl
+      reference-prefix: Table S
+      space-before-numbering: false
+      latex-list-of-description: Supplementary Table
+---
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+# setup chunk
+library(here)
+library(htmltools)
+purrr::walk(list.files("R", full.names = TRUE, pattern = "\\.R$"), source)
+
+library(targets)
+
+spec <- params$spec  # "initial" or "rev1"
+registry  <- yaml::read_yaml(here("specs.yml"))
+
+```
+
+{{< pagebreak >}}
+
+# Supplemental Information
+
+::: {#supptbl-perceptual}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+library(htmltools)
+
+htmltools::includeHTML(path = here::here("manuscript", spec, "03_tables",  "supptbl_01_perceptual_models.html"))
+```
+
+Mean estimate and 95% credible interval for the Bayesian mixed effects models on the effects of group/severity, condition, and the interaction between group/severity and condition on intelligibility and articulatory precision ratings. Estimates are on the logit scale. The probability of direction (pd) represents the probability that the parameter is strictly positive or negative. Bolded parameters indicate compelling evidence for the effect (pd \> 95%).
+:::
+
+{{< pagebreak >}}
+
+::: {#supptbl-corner-vowel-distance}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+library(htmltools)
+
+htmltools::includeHTML(path = here::here("manuscript", spec, "03_tables",  "supptbl_02_corner_vowel_models.html"))
+```
+
+Mean estimate and 95% credible interval for the Bayesian mixed effects models on the effects of group/severity, condition, and the interaction between group/severity and condition on corner vowel distance. The probability of direction (pd) represents the probability that the parameter is strictly positive or negative. Bolded parameters indicate compelling evidence for the effect (pd \> 95%).
+:::
+
+{{< pagebreak >}}
+
+::: {#supptbl-lingual-distance}
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+library(htmltools)
+
+htmltools::includeHTML(path = here::here("manuscript", spec, "03_tables",  "supptbl_03_lingual_models.html"))
+```
+
+Mean estimate and 95% credible interval for the Bayesian mixed effects models on the effects of group/severity, condition, and the interaction between group/severity and condition on tongue front (tf) and tongue back (TB) distance. The probability of direction (pd) represents the probability that the parameter is strictly positive or negative. Bolded parameters indicate compelling evidence for the effect (pd \> 95%).
+:::

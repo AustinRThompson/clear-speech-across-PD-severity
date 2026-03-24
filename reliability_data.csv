@@ -1,0 +1,81 @@
+database_id,group,sex,age,severity,measure,M,sd,n_ratings
+Sub11,PwPD,M,63,Profound,Intelligibility,41.3571428571429,39.3516828744966,14
+Sub12,PwPD,M,77,Profound,Intelligibility,58.1666666666667,37.7159482662598,24
+Sub13,PwPD,F,51,Mild,Intelligibility,82.5952380952381,26.9833367946975,42
+Sub16,Control,M,55,Control,Intelligibility,89.5294117647059,15.1702166224074,34
+Sub17,PwPD,F,73,Mild,Intelligibility,80.5,26.9077946284103,18
+Sub18_2,PwPD,M,73,Severe,Intelligibility,68.05,38.5848006617277,20
+Sub22,PwPD,M,67,Severe,Intelligibility,66.55,35.9172660429493,20
+Sub23,PwPD,M,49,Profound,Intelligibility,58.0263157894737,35.5303348445783,38
+Sub24,PwPD,M,67,Severe,Intelligibility,82,24.7058890222747,22
+Sub25,PwPD,M,68,Profound,Intelligibility,20.2666666666667,25.3498736082455,30
+Sub26,PwPD,M,60,Profound,Intelligibility,76.875,25.9369008574069,24
+Sub28,PwPD,M,80,Profound,Intelligibility,27.8571428571429,25.6390841755831,14
+Sub29,PwPD,M,50,Mild,Intelligibility,97.4888888888889,4.76551162102255,45
+Sub30,Control,M,49,Control,Intelligibility,88,17.4862583410297,27
+Sub32,Control,M,51,Control,Intelligibility,90.8421052631579,16.7663213193358,38
+Sub34,Control,M,85,Control,Intelligibility,85.3055555555556,15.3861151588872,36
+Sub35,Control,M,47,Control,Intelligibility,92.1052631578947,14.208466211771,38
+Sub36,PwPD,M,79,Severe,Intelligibility,80,25.6063314538869,20
+Sub37,Control,M,68,Control,Intelligibility,91.6896551724138,16.171190097286,29
+Sub38,Control,M,70,Control,Intelligibility,94.8461538461538,9.14195737330823,26
+Sub39,Control,F,66,Control,Intelligibility,90.8529411764706,14.5771351737995,34
+Sub40,Control,M,53,Control,Intelligibility,87.72,17.2518598031246,25
+Sub41,PwPD,F,80,Mild,Intelligibility,97.0277777777778,6.09208437757489,36
+Sub42,PwPD,M,65,Moderate,Intelligibility,90.7857142857143,12.2364275313573,28
+Sub44,Control,F,54,Control,Intelligibility,88.5,19.3227940622046,28
+Sub45,PwPD,F,61,Severe,Intelligibility,80.4285714285714,21.9605040075071,14
+Sub46,PwPD,M,82,Moderate,Intelligibility,71.0588235294118,30.931930326533,34
+Sub47,Control,F,68,Control,Intelligibility,97.0333333333333,5.46766881759042,30
+Sub48,PwPD,F,63,Mild,Intelligibility,92.5294117647059,14.6540619958026,34
+Sub49_2,Control,M,74,Control,Intelligibility,94.6944444444444,8.89564723235694,36
+Sub50,PwPD,M,78,Severe,Intelligibility,64.1,33.9936526582924,20
+Sub51,PwPD,M,82,Moderate,Intelligibility,83,19.8209375463773,24
+Sub52,PwPD,F,69,Moderate,Intelligibility,95.4814814814815,9.19184576078322,27
+Sub53,Control,F,56,Control,Intelligibility,93.8,14.12947646812,20
+Sub54,Control,F,68,Control,Intelligibility,89.6666666666667,17.2063111344978,36
+Sub55_2,Control,F,65,Control,Intelligibility,94.7,8.80848872873267,20
+Sub57,Control,F,49,Control,Intelligibility,94.175,11.6352415597548,40
+Sub58,Control,F,65,Control,Intelligibility,84.2580645161291,24.1936186378908,31
+Sub59,PwPD,M,74,Moderate,Intelligibility,77.375,27.5472913526823,24
+Sub60,Control,F,72,Control,Intelligibility,89.6944444444445,14.192189893327,36
+Sub11,PwPD,M,63,Profound,Articulatory Precision,41.0714285714286,29.7204003640967,14
+Sub12,PwPD,M,77,Profound,Articulatory Precision,41.0416666666667,25.5810377575583,24
+Sub13,PwPD,F,51,Mild,Articulatory Precision,78.8095238095238,29.856762191306,42
+Sub16,Control,M,55,Control,Articulatory Precision,88.1764705882353,17.8452448266576,34
+Sub17,PwPD,F,73,Mild,Articulatory Precision,83,18.68941191282,18
+Sub18_2,PwPD,M,73,Severe,Articulatory Precision,43.5,26.202651533164,20
+Sub22,PwPD,M,67,Severe,Articulatory Precision,60.35,23.6627066121043,20
+Sub23,PwPD,M,49,Profound,Articulatory Precision,36.921052631579,30.3639024473962,38
+Sub24,PwPD,M,67,Severe,Articulatory Precision,64.1818181818182,21.517736568073,22
+Sub25,PwPD,M,68,Profound,Articulatory Precision,15.9,16.8693764576218,30
+Sub26,PwPD,M,60,Profound,Articulatory Precision,57.9166666666667,27.6498552031222,24
+Sub28,PwPD,M,80,Profound,Articulatory Precision,7.42857142857143,6.62993544131796,14
+Sub29,PwPD,M,50,Mild,Articulatory Precision,95.8222222222222,6.66158897536974,45
+Sub30,Control,M,49,Control,Articulatory Precision,67.3703703703704,28.1139824890749,27
+Sub32,Control,M,51,Control,Articulatory Precision,86.1842105263158,21.2601076287707,38
+Sub34,Control,M,85,Control,Articulatory Precision,64.8055555555556,30.5995512987125,36
+Sub35,Control,M,47,Control,Articulatory Precision,86,23.2262665846119,38
+Sub36,PwPD,M,79,Severe,Articulatory Precision,58.8,32.0798346235401,20
+Sub37,Control,M,68,Control,Articulatory Precision,78.2758620689655,23.0804440284784,29
+Sub38,Control,M,70,Control,Articulatory Precision,93.1923076923077,10.0956197660935,26
+Sub39,Control,F,66,Control,Articulatory Precision,85.8823529411765,18.6267398306881,34
+Sub40,Control,M,53,Control,Articulatory Precision,80.52,19.4596163031717,25
+Sub41,PwPD,F,80,Mild,Articulatory Precision,88.1944444444445,16.8621629597908,36
+Sub42,PwPD,M,65,Moderate,Articulatory Precision,71,23.0972180463683,28
+Sub44,Control,F,54,Control,Articulatory Precision,85.6071428571429,18.6732910581343,28
+Sub45,PwPD,F,61,Severe,Articulatory Precision,64.4285714285714,32.66547056194,14
+Sub46,PwPD,M,82,Moderate,Articulatory Precision,55.2941176470588,31.2938462454558,34
+Sub47,Control,F,68,Control,Articulatory Precision,94.5333333333333,9.28377648089,30
+Sub48,PwPD,F,63,Mild,Articulatory Precision,95.1176470588235,8.5661939707425,34
+Sub49_2,Control,M,74,Control,Articulatory Precision,85.7777777777778,15.4644497590185,36
+Sub50,PwPD,M,78,Severe,Articulatory Precision,42.85,28.118686425859,20
+Sub51,PwPD,M,82,Moderate,Articulatory Precision,71.2083333333333,24.8578203365472,24
+Sub52,PwPD,F,69,Moderate,Articulatory Precision,91.0740740740741,9.43775529833366,27
+Sub53,Control,F,56,Control,Articulatory Precision,92.5,11.7181820037788,20
+Sub54,Control,F,68,Control,Articulatory Precision,92.1388888888889,11.4695940338613,36
+Sub55_2,Control,F,65,Control,Articulatory Precision,79.75,22.2447510071122,20
+Sub57,Control,F,49,Control,Articulatory Precision,94.55,8.90678220407175,40
+Sub58,Control,F,65,Control,Articulatory Precision,86.4516129032258,14.2964767447028,31
+Sub59,PwPD,M,74,Moderate,Articulatory Precision,66.125,29.0326839808247,24
+Sub60,Control,F,72,Control,Articulatory Precision,82.1666666666667,22.1391701999614,36

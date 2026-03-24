@@ -1,0 +1,9 @@
+initial:
+  measures:
+    corner_dispersion: v1
+    tb_distance: v1
+
+rev1:
+  measures:
+    corner_dispersion: v1
+    tb_distance: v1
